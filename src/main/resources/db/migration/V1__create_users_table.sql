@@ -2,10 +2,13 @@
 
 -- Create the users table
 CREATE TABLE users (
-                       id INT PRIMARY KEY,
-                       name VARCHAR(100) NOT NULL,
-                       email VARCHAR(100) NOT NULL
+                       id SERIAL PRIMARY KEY,
+                       email VARCHAR(255) NOT NULL,
+                       first_name VARCHAR(255) NOT NULL,
+                       last_name VARCHAR(255) NOT NULL,
+                       role VARCHAR(255) NOT NULL,
+                       password VARCHAR(255) NOT NULL,
+                       locked BOOLEAN NOT NULL,
+                       enabled BOOLEAN NOT NULL
 );
 
--- Add an index on the email column
-CREATE INDEX idx_users_email ON users (email);

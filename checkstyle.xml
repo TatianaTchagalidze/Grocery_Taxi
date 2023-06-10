@@ -6,8 +6,4 @@
 <module name="Checker">
     <property name="severity" value="error" />
     <property name="fileExtensions" value="java" />
-
-    <module name="TreeWalker">
-        <!-- Add specific modules and their configurations here -->
-    </module>
 </module>
