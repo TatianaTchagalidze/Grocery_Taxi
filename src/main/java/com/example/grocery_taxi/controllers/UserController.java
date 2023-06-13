@@ -1,36 +1,46 @@
 package com.example.grocery_taxi.controllers;
 
-import com.example.grocery_taxi.model.User;
-import com.example.grocery_taxi.service.UserService;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import com.example.grocery_taxi.dto.UserDto;
+import com.example.grocery_taxi.entity.User;
+import com.example.grocery_taxi.repository.UserRepository;
+import javax.validation.Valid;
+import lombok.AllArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
+
 
 @RestController
-@RequestMapping("/api/users")
+@AllArgsConstructor
 public class UserController {
 
-    private final UserService userService;
+  private final UserRepository userRepository;
+  private final PasswordEncoder passwordEncoder;
 
-    public UserController(UserService userService) {
-        this.userService = userService;
-    }
+  @PostMapping("/users")
+  public ResponseEntity<User> registerUser(@Valid @RequestBody UserDto userDto, BindingResult bindingResult) {
+    if (bindingResult.hasErrors()) {
+      // Handle validation errors and return appropriate response
+      return ResponseEntity.badRequest().build();
+    } else {
+      User user = User.builder()
+          .email(userDto.getEmail())
+          .firstName(userDto.getFirstName())
+          .lastName(userDto.getLastName())
+          .role(userDto.getRole())
+          .password(passwordEncoder.encode(userDto.getPassword()))
+          .build();
 
-    @PostMapping("/register")
-    public ResponseEntity<String> registerUser(@RequestBody User user) {
-        try {
-            // Call the registerUser method in the UserService
-            userService.registerUser(user, user.getPasswordConfirmation());
-            return ResponseEntity.ok("User registered successfully!");
-        } catch (IllegalArgumentException e) {
-            // Handle validation errors
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-        } catch (Exception e) {
-            // Handle other exceptions
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to register user");
-        }
+      // Save the user in the database
+      User createdUser = userRepository.save(user);
+
+      // Return the created user entity with 201 HTTP status code
+      return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
     }
+  }
 }
