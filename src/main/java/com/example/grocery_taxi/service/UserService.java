@@ -1,10 +1,11 @@
 package com.example.grocery_taxi.service;
 
+import com.example.grocery_taxi.dto.UserDto;
 import com.example.grocery_taxi.entity.User;
 import com.example.grocery_taxi.repository.UserRepository;
-import lombok.AllArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import lombok.AllArgsConstructor;
 
 @Service
 @AllArgsConstructor
@@ -13,12 +14,16 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public User registerUser( User user, String passwordConfirmation) {
-        validatePassword(user.getPassword(), passwordConfirmation);
+    public User registerUser(UserDto userDto) {
+        validatePassword(userDto.getPassword(), userDto.getPasswordConfirmation());
 
-        // Encode the user's password before storing it
-        String encodedPassword = passwordEncoder.encode(user.getPassword());
-        user.setPassword(encodedPassword);
+        User user = User.builder()
+                .email(userDto.getEmail())
+                .firstName(userDto.getFirstName())
+                .lastName(userDto.getLastName())
+                .role(userDto.getRole())
+                .password(passwordEncoder.encode(userDto.getPassword()))
+                .build();
 
         userRepository.save(user);
         return user;
