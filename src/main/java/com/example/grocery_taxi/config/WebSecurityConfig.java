@@ -14,18 +14,14 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
   @Autowired
   private PasswordEncoder passwordEncoder;
 
-
   @Override
   protected void configure(HttpSecurity http) throws Exception {
     http
         .authorizeRequests()
         .antMatchers("/users").permitAll()
-        .anyRequest().authenticated()
+        .anyRequest().permitAll() // Allow access to all other requests
         .and()
-        .httpBasic()
-        .and()
-        .csrf().disable();
+        .csrf().disable()
+        .headers().frameOptions().disable(); // Disable frame options (if needed)
   }
 }
-
-

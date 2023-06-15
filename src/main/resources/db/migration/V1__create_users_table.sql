@@ -1,4 +1,5 @@
 -- V1__create_users_table.sql
+DROP TABLE IF EXISTS users CASCADE;
 
 -- Create the users table
 CREATE TABLE users (
