@@ -2,13 +2,14 @@ package com.example.grocery_taxi.service;
 
 import com.example.grocery_taxi.dto.UserDto;
 import com.example.grocery_taxi.entity.User;
+import com.example.grocery_taxi.model.UserRole;
 import com.example.grocery_taxi.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import lombok.AllArgsConstructor;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class UserService {
 
     private final UserRepository userRepository;
@@ -18,12 +19,12 @@ public class UserService {
         validatePassword(userDto.getPassword(), userDto.getPasswordConfirmation());
 
         User user = User.builder()
-                .email(userDto.getEmail())
-                .firstName(userDto.getFirstName())
-                .lastName(userDto.getLastName())
-                .role(userDto.getRole())
-                .password(passwordEncoder.encode(userDto.getPassword()))
-                .build();
+            .email(userDto.getEmail())
+            .firstName(userDto.getFirstName())
+            .lastName(userDto.getLastName())
+            .role(UserRole.valueOf(userDto.getRole()))
+            .password(passwordEncoder.encode(userDto.getPassword()))
+            .build();
 
         userRepository.save(user);
         return user;

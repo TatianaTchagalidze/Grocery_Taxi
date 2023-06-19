@@ -1,5 +1,6 @@
 package com.example.grocery_taxi.entity;
 
+import com.example.grocery_taxi.model.UserRole;
 import lombok.*;
 
 import javax.persistence.*;
@@ -27,7 +28,8 @@ public class User {
     @NotBlank
     private String lastName;
 
-    private String role;
+    @Enumerated(EnumType.STRING)
+    private UserRole role;
 
     @NotBlank
     @Size(min = 8)
