@@ -27,11 +27,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     http.csrf().disable()
         .authorizeRequests()
         .antMatchers("/users").permitAll()
-        .antMatchers("/health").authenticated()
+        .antMatchers("/health").permitAll()
         .anyRequest().permitAll()
         .and()
-        .logout().disable()
-        .exceptionHandling().authenticationEntryPoint(authenticationEntryPoint);
+        .httpBasic()
+        .authenticationEntryPoint(authenticationEntryPoint);
   }
 
   @Override
