@@ -1,6 +1,6 @@
 package com.example.grocery_taxi.config;
 
-import io.jsonwebtoken.Claims;
+
 import io.jsonwebtoken.JwsHeader;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -28,6 +28,7 @@ public class JwtUtil {
 
     // Build JWT token
     return Jwts.builder()
+        .setHeaderParam(JwsHeader.TYPE, JwsHeader.JWT_TYPE)
         .setSubject(username)
         .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
         .signWith(secretKey, SignatureAlgorithm.HS256)
@@ -62,4 +63,3 @@ public class JwtUtil {
     return parts[0];
   }
 }
-
