@@ -41,13 +41,15 @@ public class UserController {
 
   @PostMapping("/login")
   @ResponseStatus(HttpStatus.OK)
-  public ResponseEntity<?> login(HttpServletRequest request, HttpServletResponse response, @RequestBody @Valid LoginRequestDto loginRequestDtoForm) {
+  public ResponseEntity<?> login(HttpServletRequest request, HttpServletResponse response,
+                                 @RequestBody @Valid LoginRequestDto loginRequestDtoForm) {
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     if (authentication != null) {
       new SecurityContextLogoutHandler().logout(request, response, authentication);
     }
 
-    boolean isAuthenticated = authenticationService.authenticateUser(loginRequestDtoForm.getEmail(), loginRequestDtoForm.getPassword());
+    boolean isAuthenticated = authenticationService.authenticateUser(loginRequestDtoForm.getEmail(),
+        loginRequestDtoForm.getPassword());
     if (isAuthenticated) {
       String token = jwtUtil.generateToken(loginRequestDtoForm.getEmail());
 
@@ -57,14 +59,15 @@ public class UserController {
 
       // Set the cookie in the response
       Cookie jwtCookie = new Cookie("jwt", token);
-      jwtCookie.setPath("/"); // Set the cookie path ("/" means it's valid for all paths)
-      jwtCookie.setMaxAge(3600); // Set the cookie's maximum age in seconds (e.g., 1 hour)
+      jwtCookie.setPath("/"); // Set the cookie path to "/" which means it's valid for all paths
+      jwtCookie.setMaxAge(3600);
       response.addCookie(jwtCookie);
 
       return ResponseEntity.ok(responseMap);
     } else {
-      ApiError apiError = new ApiError(HttpStatus.UNAUTHORIZED, LocalDateTime.now(), "Authentication Error",
-          List.of("Invalid email or password"));
+      ApiError apiError =
+          new ApiError(HttpStatus.UNAUTHORIZED, LocalDateTime.now(), "Authentication Error",
+              List.of("Invalid email or password"));
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(apiError);
     }
   }
@@ -102,7 +105,7 @@ public class UserController {
   }
 
 
-   // The purpose of this code is to extract a token from the request, validate it using a JWT (JSON Web Token) utility, and return a response accordingly.
+  // The purpose of this code is to extract a token from the request, validate it using a JWT (JSON Web Token) utility, and return a response accordingly.
   @GetMapping("/secure-resource")
   public ResponseEntity<?> secureResource(HttpServletRequest request) {
     String token = extractTokenFromCookies(request.getCookies());
@@ -117,8 +120,9 @@ public class UserController {
       responseMap.put("token", token);
       return ResponseEntity.ok(responseMap);
     } else {
-      ApiError apiError = new ApiError(HttpStatus.UNAUTHORIZED, LocalDateTime.now(), "Authentication Error",
-          List.of("Invalid token"));
+      ApiError apiError =
+          new ApiError(HttpStatus.UNAUTHORIZED, LocalDateTime.now(), "Authentication Error",
+              List.of("Invalid token"));
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(apiError);
     }
   }
@@ -133,13 +137,13 @@ public class UserController {
     }
     return null;
   }
-
-
-  private String extractTokenFromRequest(HttpServletRequest request) {
-    String bearerToken = request.getHeader("Authorization");
-    if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-      return bearerToken.substring(7);
-    }
-    return null;
-  }
 }
+
+//  private String extractTokenFromRequest(HttpServletRequest request) {
+//    String bearerToken = request.getHeader("Authorization");
+//    if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+//      return bearerToken.substring(7);
+//    }
+//    return null;
+//  }
+//}
