@@ -7,7 +7,7 @@ import com.example.grocery_taxi.entity.User;
 import com.example.grocery_taxi.exception.ApiError;
 import com.example.grocery_taxi.service.AuthenticationService;
 import com.example.grocery_taxi.service.UserService;
-import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -21,11 +21,15 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
+import javax.servlet.http.Cookie;
+
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
@@ -51,6 +55,12 @@ public class UserController {
       Map<String, String> responseMap = new HashMap<>();
       responseMap.put("token", token);
 
+      // Set the cookie in the response
+      Cookie jwtCookie = new Cookie("jwt", token);
+      jwtCookie.setPath("/"); // Set the cookie path ("/" means it's valid for all paths)
+      jwtCookie.setMaxAge(3600); // Set the cookie's maximum age in seconds (e.g., 1 hour)
+      response.addCookie(jwtCookie);
+
       return ResponseEntity.ok(responseMap);
     } else {
       ApiError apiError = new ApiError(HttpStatus.UNAUTHORIZED, LocalDateTime.now(), "Authentication Error",
@@ -58,6 +68,7 @@ public class UserController {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(apiError);
     }
   }
+
 
   @GetMapping("/logout")
   public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response) {
@@ -94,7 +105,8 @@ public class UserController {
    // The purpose of this code is to extract a token from the request, validate it using a JWT (JSON Web Token) utility, and return a response accordingly.
   @GetMapping("/secure-resource")
   public ResponseEntity<?> secureResource(HttpServletRequest request) {
-    String token = extractTokenFromRequest(request);
+    String token = extractTokenFromCookies(request.getCookies());
+
 
     if (jwtUtil.validateToken(token)) {
       Authentication authentication = new UsernamePasswordAuthenticationToken(token, null);
@@ -103,7 +115,6 @@ public class UserController {
       // Create a map to represent the JSON structure
       Map<String, String> responseMap = new HashMap<>();
       responseMap.put("token", token);
-
       return ResponseEntity.ok(responseMap);
     } else {
       ApiError apiError = new ApiError(HttpStatus.UNAUTHORIZED, LocalDateTime.now(), "Authentication Error",
@@ -111,6 +122,18 @@ public class UserController {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(apiError);
     }
   }
+
+  private String extractTokenFromCookies(Cookie[] cookies) {
+    if (cookies != null) {
+      for (Cookie cookie : cookies) {
+        if (cookie.getName().equals("jwt")) {
+          return cookie.getValue();
+        }
+      }
+    }
+    return null;
+  }
+
 
   private String extractTokenFromRequest(HttpServletRequest request) {
     String bearerToken = request.getHeader("Authorization");
