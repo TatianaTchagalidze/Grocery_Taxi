@@ -92,7 +92,6 @@ public class UserController {
   @GetMapping("/secure-resource")
   public ResponseEntity<?> secureResource() {
     // Access secure resource
-    // You can retrieve the authenticated user details from JwtAuthenticationFilter if needed
     return ResponseEntity.ok("Secure resource accessed successfully");
   }
 }
