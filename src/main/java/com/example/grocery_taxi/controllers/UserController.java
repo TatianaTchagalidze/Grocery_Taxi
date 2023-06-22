@@ -1,16 +1,14 @@
 package com.example.grocery_taxi.controllers;
 
-import com.example.grocery_taxi.config.JwtUtil;
 import com.example.grocery_taxi.dto.LoginRequestDto;
 import com.example.grocery_taxi.dto.UserDto;
 import com.example.grocery_taxi.entity.User;
 import com.example.grocery_taxi.exception.ApiError;
+import com.example.grocery_taxi.filter.JwtAuthenticationFilter;
 import com.example.grocery_taxi.service.AuthenticationService;
 import com.example.grocery_taxi.service.UserService;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
@@ -21,23 +19,23 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
-import javax.servlet.http.Cookie;
-
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
-import lombok.RequiredArgsConstructor;
-
 @RestController
-@RequiredArgsConstructor
 public class UserController {
 
   private final UserService userService;
   private final AuthenticationService authenticationService;
-  private final JwtUtil jwtUtil;
+  private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+  public UserController(UserService userService, AuthenticationService authenticationService,
+                        JwtAuthenticationFilter jwtAuthenticationFilter) {
+    this.userService = userService;
+    this.authenticationService = authenticationService;
+    this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+  }
 
   @PostMapping("/login")
   @ResponseStatus(HttpStatus.OK)
@@ -51,42 +49,29 @@ public class UserController {
     boolean isAuthenticated = authenticationService.authenticateUser(loginRequestDtoForm.getEmail(),
         loginRequestDtoForm.getPassword());
     if (isAuthenticated) {
-      String token = jwtUtil.generateToken(loginRequestDtoForm.getEmail());
+      String token = jwtAuthenticationFilter.generateToken(loginRequestDtoForm.getPassword());
+      jwtAuthenticationFilter.saveTokenInCookies(request, response, token);
 
-      // Create a map to represent the JSON structure
-      Map<String, String> responseMap = new HashMap<>();
-      responseMap.put("token", token);
-
-      // Set the cookie in the response
-      Cookie jwtCookie = new Cookie("jwt", token);
-      jwtCookie.setPath("/"); // Set the cookie path to "/" which means it's valid for all paths
-      jwtCookie.setMaxAge(3600);
-      response.addCookie(jwtCookie);
-
-      return ResponseEntity.ok(responseMap);
-    } else {
-      ApiError apiError =
-          new ApiError(HttpStatus.UNAUTHORIZED, LocalDateTime.now(), "Authentication Error",
-              List.of("Invalid email or password"));
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(apiError);
+      return ResponseEntity.ok().build();
     }
+
+    // Authentication failed
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
   }
 
 
   @GetMapping("/logout")
   public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response) {
-    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    if (authentication != null) {
-      new SecurityContextLogoutHandler().logout(request, response, authentication);
-    }
+    // Remove the JWT token from cookies using JwtAuthenticationFilter
+    jwtAuthenticationFilter.removeTokenFromCookies(response);
+
     return ResponseEntity.ok("Logout successful");
   }
 
   @PostMapping("/users")
-  public ResponseEntity<?> registerUser(@Valid @RequestBody UserDto userDto,
-                                        BindingResult bindingResult) {
+  public ResponseEntity<?> registerUser(@Valid @RequestBody UserDto userDto, BindingResult bindingResult) {
+    // Handle user registration
     if (bindingResult.hasErrors()) {
-      // Handle validation errors and return appropriate response
       List<String> validationErrors = bindingResult.getFieldErrors()
           .stream()
           .map(FieldError::getDefaultMessage)
@@ -104,46 +89,10 @@ public class UserController {
     return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
   }
 
-
-  // The purpose of this code is to extract a token from the request, validate it using a JWT (JSON Web Token) utility, and return a response accordingly.
   @GetMapping("/secure-resource")
-  public ResponseEntity<?> secureResource(HttpServletRequest request) {
-    String token = extractTokenFromCookies(request.getCookies());
-
-
-    if (jwtUtil.validateToken(token)) {
-      Authentication authentication = new UsernamePasswordAuthenticationToken(token, null);
-      SecurityContextHolder.getContext().setAuthentication(authentication);
-
-      // Create a map to represent the JSON structure
-      Map<String, String> responseMap = new HashMap<>();
-      responseMap.put("token", token);
-      return ResponseEntity.ok(responseMap);
-    } else {
-      ApiError apiError =
-          new ApiError(HttpStatus.UNAUTHORIZED, LocalDateTime.now(), "Authentication Error",
-              List.of("Invalid token"));
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(apiError);
-    }
-  }
-
-  private String extractTokenFromCookies(Cookie[] cookies) {
-    if (cookies != null) {
-      for (Cookie cookie : cookies) {
-        if (cookie.getName().equals("jwt")) {
-          return cookie.getValue();
-        }
-      }
-    }
-    return null;
+  public ResponseEntity<?> secureResource() {
+    // Access secure resource
+    // You can retrieve the authenticated user details from JwtAuthenticationFilter if needed
+    return ResponseEntity.ok("Secure resource accessed successfully");
   }
 }
-
-//  private String extractTokenFromRequest(HttpServletRequest request) {
-//    String bearerToken = request.getHeader("Authorization");
-//    if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-//      return bearerToken.substring(7);
-//    }
-//    return null;
-//  }
-//}
