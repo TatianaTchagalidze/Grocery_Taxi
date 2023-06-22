@@ -5,6 +5,7 @@ import io.jsonwebtoken.JwsHeader;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -12,54 +13,63 @@ import javax.crypto.SecretKey;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Date;
+import java.util.Map;
 
 @Component
 public class JwtUtil {
-  @Value("${jwt.secret-length}")
-  private int secretLength;
+
+  private Map<String, String> secretKeyMap = new ConcurrentHashMap<>(); // Map to store secret keys for each user
 
   @Value("${jwt.expiration-time}")
   private long expirationTime;
 
   public String generateToken(String username) {
-    // Generate random secret
-    byte[] secretBytes = generateRandomSecret();
-    SecretKey secretKey = Keys.hmacShaKeyFor(secretBytes);
+    String secretKey = getOrCreateSecretKey(username); // Get or create a secret key for the user
 
     // Build JWT token
     return Jwts.builder()
         .setHeaderParam(JwsHeader.TYPE, JwsHeader.JWT_TYPE)
         .setSubject(username)
         .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
-        .signWith(secretKey, SignatureAlgorithm.HS256)
+        .signWith(Keys.hmacShaKeyFor(secretKey.getBytes()), SignatureAlgorithm.HS256)
         .compact();
   }
 
   public boolean validateToken(String token) {
     try {
-      byte[] secretBytes = Base64.getUrlDecoder().decode(getSecretFromToken(token));
-      SecretKey secretKey = Keys.hmacShaKeyFor(secretBytes);
+      String username = extractUsernameFromToken(token);
+      String secretKey = secretKeyMap.get(username); // Retrieve the secret key for the user
 
-      Jwts.parserBuilder()
-          .setSigningKey(secretKey)
-          .build()
-          .parseClaimsJws(token);
-
-      return true;
+      if (secretKey != null) {
+        Jwts.parserBuilder()
+            .setSigningKey(Keys.hmacShaKeyFor(secretKey.getBytes()))
+            .build()
+            .parseClaimsJws(token);
+        return true;
+      }
     } catch (Exception e) {
-      return false;
+      // Token validation failed
     }
+    return false;
   }
 
-  private byte[] generateRandomSecret() {
-    SecureRandom secureRandom = new SecureRandom();
-    byte[] randomBytes = new byte[secretLength];
-    secureRandom.nextBytes(randomBytes);
-    return randomBytes;
+  private String extractUsernameFromToken(String token) {
+    return Jwts.parserBuilder()
+        .build()
+        .parseClaimsJws(token)
+        .getBody()
+        .getSubject();
   }
 
-  private String getSecretFromToken(String token) {
-    String[] parts = token.split("\\.");
-    return parts[0];
+  private String getOrCreateSecretKey(String username) {
+    return secretKeyMap.computeIfAbsent(username, key -> generateNewSecretKey());
+  }
+
+  private String generateNewSecretKey() {
+    // Generate a new secret key
+    byte[] keyBytes = new byte[64];
+    new SecureRandom().nextBytes(keyBytes);
+    return Base64.getEncoder().encodeToString(keyBytes);
   }
 }
+
