@@ -1,37 +1,77 @@
 package com.example.grocery_taxi.controllers;
 
+import com.example.grocery_taxi.dto.LoginRequestDto;
 import com.example.grocery_taxi.dto.UserDto;
 import com.example.grocery_taxi.entity.User;
 import com.example.grocery_taxi.exception.ApiError;
+import com.example.grocery_taxi.filter.JwtAuthenticationFilter;
+import com.example.grocery_taxi.service.AuthenticationService;
 import com.example.grocery_taxi.service.UserService;
-import org.springframework.validation.BindingResult;
-import org.springframework.validation.FieldError;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.annotation.*;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.time.LocalDateTime;
-
 
 @RestController
 public class UserController {
 
   private final UserService userService;
+  private final AuthenticationService authenticationService;
+  private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-  public UserController(UserService userService) {
+  public UserController(UserService userService, AuthenticationService authenticationService,
+                        JwtAuthenticationFilter jwtAuthenticationFilter) {
     this.userService = userService;
+    this.authenticationService = authenticationService;
+    this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+  }
+
+  @PostMapping("/login")
+  @ResponseStatus(HttpStatus.OK)
+  public ResponseEntity<?> login(HttpServletRequest request, HttpServletResponse response,
+                                 @RequestBody @Valid LoginRequestDto loginRequestDtoForm) {
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    if (authentication != null) {
+      new SecurityContextLogoutHandler().logout(request, response, authentication);
+    }
+
+    boolean isAuthenticated = authenticationService.authenticateUser(loginRequestDtoForm.getEmail(),
+        loginRequestDtoForm.getPassword());
+    if (isAuthenticated) {
+      String token = jwtAuthenticationFilter.generateToken(loginRequestDtoForm.getPassword());
+      jwtAuthenticationFilter.saveTokenInCookies(request, response, token);
+
+      return ResponseEntity.ok().build();
+    }
+
+    // Authentication failed
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+  }
+
+
+  @GetMapping("/logout")
+  public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response) {
+    // Remove the JWT token from cookies using JwtAuthenticationFilter
+    jwtAuthenticationFilter.removeTokenFromCookies(response);
+
+    return ResponseEntity.ok("Logout successful");
   }
 
   @PostMapping("/users")
-  public ResponseEntity<?> registerUser(@Valid @RequestBody UserDto userDto,
-                                        BindingResult bindingResult) {
+  public ResponseEntity<?> registerUser(@Valid @RequestBody UserDto userDto, BindingResult bindingResult) {
+    // Handle user registration
     if (bindingResult.hasErrors()) {
-      // Handle validation errors and return appropriate response
       List<String> validationErrors = bindingResult.getFieldErrors()
           .stream()
           .map(FieldError::getDefaultMessage)
@@ -47,5 +87,11 @@ public class UserController {
     User createdUser = userService.registerUser(userDto);
 
     return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
+  }
+
+  @GetMapping("/secure-resource")
+  public ResponseEntity<?> secureResource() {
+    // Access secure resource
+    return ResponseEntity.ok("Secure resource accessed successfully");
   }
 }
