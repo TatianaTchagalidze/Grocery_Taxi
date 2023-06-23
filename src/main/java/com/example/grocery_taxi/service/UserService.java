@@ -4,7 +4,9 @@ import com.example.grocery_taxi.dto.UserDto;
 import com.example.grocery_taxi.entity.User;
 import com.example.grocery_taxi.model.UserRole;
 import com.example.grocery_taxi.repository.UserRepository;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -30,9 +32,24 @@ public class UserService {
         return user;
     }
 
+
     private void validatePassword(String password, String passwordConfirmation) {
         if (!password.equals(passwordConfirmation)) {
             throw new IllegalArgumentException("Password confirmation does not match the password");
         }
     }
+
+    public User getUserByUsername(String username) {
+        return userRepository.findByEmail(username)
+            .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
+    }
+
+    public boolean emailExists(String email) {
+
+        Optional<User> existingUser = userRepository.findByEmail(email);
+
+        // Check if an existing user with the given email was found
+        return existingUser.isPresent();
+    }
 }
+

@@ -7,6 +7,7 @@ import com.example.grocery_taxi.exception.ApiError;
 import com.example.grocery_taxi.filter.JwtAuthenticationFilter;
 import com.example.grocery_taxi.service.AuthenticationService;
 import com.example.grocery_taxi.service.UserService;
+import java.util.ArrayList;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -70,6 +71,16 @@ public class UserController {
 
   @PostMapping("/users")
   public ResponseEntity<?> registerUser(@Valid @RequestBody UserDto userDto, BindingResult bindingResult) {
+    // Check if email already exists
+    if (userService.emailExists(userDto.getEmail())) {
+      List<String> validationErrors = new ArrayList<>();
+      validationErrors.add("Email already exists. Please use a different email.");
+
+      ApiError apiError = new ApiError(HttpStatus.BAD_REQUEST, LocalDateTime.now(), "Validation Error", validationErrors);
+
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(apiError);
+    }
+
     // Handle user registration
     if (bindingResult.hasErrors()) {
       List<String> validationErrors = bindingResult.getFieldErrors()
@@ -77,9 +88,7 @@ public class UserController {
           .map(FieldError::getDefaultMessage)
           .collect(Collectors.toList());
 
-      ApiError apiError =
-          new ApiError(HttpStatus.BAD_REQUEST, LocalDateTime.now(), "Validation Error",
-              validationErrors);
+      ApiError apiError = new ApiError(HttpStatus.BAD_REQUEST, LocalDateTime.now(), "Validation Error", validationErrors);
 
       return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(apiError);
     }
@@ -88,6 +97,7 @@ public class UserController {
 
     return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
   }
+
 
   @GetMapping("/secure-resource")
   public ResponseEntity<?> secureResource() {

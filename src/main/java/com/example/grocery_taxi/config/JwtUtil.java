@@ -9,7 +9,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import javax.crypto.SecretKey;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Date;
@@ -53,7 +52,7 @@ public class JwtUtil {
     return false;
   }
 
-  private String extractUsernameFromToken(String token) {
+  public String extractUsernameFromToken(String token) {
     return Jwts.parserBuilder()
         .build()
         .parseClaimsJws(token)
