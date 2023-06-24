@@ -8,40 +8,47 @@ import com.example.grocery_taxi.exception.OrderServiceException;
 import com.example.grocery_taxi.model.OrderState;
 import com.example.grocery_taxi.repository.OrderItemRepository;
 import com.example.grocery_taxi.repository.OrderRepository;
-
-import java.util.Optional;
+import com.example.grocery_taxi.repository.ProductRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 
 @Service
 @Transactional
 public class OrderService {
+
   private final OrderRepository orderRepository;
-  private final ProductService productService;
+  private final ProductRepository productRepository;
 
-  private final OrderItemRepository orderItemRepository;
-
-  public OrderService(OrderRepository orderRepository, OrderItemRepository orderItemRepository, ProductService productService) {
+  @Autowired
+  public OrderService(OrderRepository orderRepository, ProductRepository productRepository) {
     this.orderRepository = orderRepository;
-    this.orderItemRepository = orderItemRepository;
-    this.productService = productService;
+    this.productRepository = productRepository;
   }
 
   public Order createOrder(User user) {
     Order order = new Order();
-    order.setUser(user);
+    order.setUser(user);  // Set the user for the order
     order.setState(OrderState.DRAFT);
     order.setTotalAmount(BigDecimal.ZERO);
     order.setEditable(true); // Set the initial state as editable
     return orderRepository.save(order);
   }
 
-  public void addOrderItem(Order order, Product product, int quantity) {
-    int availableQuantity = productService.getAvailableQuantity(product);
+
+  public void addOrderItem(Order order, Long productId, int quantity) throws OrderServiceException {
+    Optional<Product> optionalProduct = productRepository.findById(productId);
+    if (optionalProduct.isEmpty()) {
+      throw new OrderServiceException("Product not found with ID: " + productId);
+    }
+
+    Product product = optionalProduct.get();
+    int availableQuantity = product.getAvailableQuantity();
     if (quantity > availableQuantity) {
-      quantity = availableQuantity;
+      throw new OrderServiceException("Requested quantity exceeds available quantity for product: " + product.getName());
     }
 
     OrderItem orderItem = new OrderItem();
@@ -52,6 +59,8 @@ public class OrderService {
 
     order.getOrderItems().add(orderItem);
     order.setTotalAmount(order.getTotalAmount().add(orderItem.getAmount()));
+
+    orderRepository.save(order);
   }
 
   public void updateOrderItemQuantity(OrderItem orderItem, int quantity) throws OrderServiceException {
@@ -61,65 +70,51 @@ public class OrderService {
       throw new OrderServiceException("Order is not editable. Cannot update order item quantity.");
     }
 
-    int availableQuantity = productService.getAvailableQuantity(orderItem.getProduct());
+    int availableQuantity = orderItem.getProduct().getAvailableQuantity();
     if (quantity > availableQuantity) {
-      quantity = availableQuantity;
+      throw new OrderServiceException("Requested quantity exceeds available quantity for product: " + orderItem.getProduct().getName());
     }
+
+    BigDecimal oldAmount = orderItem.getAmount();
 
     orderItem.setQuantity(quantity);
     orderItem.setAmount(orderItem.getProduct().getPrice().multiply(BigDecimal.valueOf(quantity)));
 
-    order.setTotalAmount(order.getTotalAmount()
-        .subtract(orderItem.getAmount())
-        .add(orderItem.getAmount()));
+    BigDecimal totalAmount = order.getTotalAmount().subtract(oldAmount).add(orderItem.getAmount());
+    order.setTotalAmount(totalAmount);
+
+    orderRepository.save(order);
   }
 
-  public void confirmOrder(Long orderId) throws OrderServiceException {
-    Order order = getOrderById(orderId);
-
-    if (order.getState() == OrderState.CONFIRMED) {
-      throw new OrderServiceException("Order is already confirmed.");
+  public void removeOrderItem(Order order, OrderItem orderItem) throws OrderServiceException {
+    if (!order.getOrderItems().contains(orderItem)) {
+      throw new OrderServiceException("Invalid order item: " + orderItem.getId());
     }
 
-    if (order.getState() == OrderState.CANCELLED) {
-      throw new OrderServiceException("Cannot confirm a cancelled order.");
+    order.getOrderItems().remove(orderItem);
+    order.setTotalAmount(order.getTotalAmount().subtract(orderItem.getAmount()));
+
+    orderRepository.save(order);
+  }
+
+  public void confirmOrder(Order order) throws OrderServiceException {
+    if (order.getState() != OrderState.DRAFT) {
+      throw new OrderServiceException("Cannot confirm an order that is not in the DRAFT state.");
     }
-    if (order.getState() != OrderState.OPEN) {
-      throw new OrderServiceException("Cannot confirm an order that is not in the OPEN state.");
+
+    if (order.getOrderItems().isEmpty()) {
+      throw new OrderServiceException("Cannot confirm an order without any items.");
     }
-    order.setState(OrderState.CONFIRMED);
+
+    order.setState(OrderState.OPEN);
     order.setEditable(false); // Disable editing of the order
 
     orderRepository.save(order);
   }
 
-  public void completeOrder(Long orderId) throws OrderServiceException {
-    Order order = getOrderById(orderId);
-
-    if (order.getState() == OrderState.DRAFT) {
-      throw new OrderServiceException("Cannot complete a draft order.");
-    }
-
-    if (order.getState() == OrderState.CANCELLED) {
-      throw new OrderServiceException("Cannot complete a cancelled order.");
-    }
-
-    if (order.getState() != OrderState.CONFIRMED) {
-      throw new OrderServiceException("Cannot complete an order that is not confirmed.");
-    }
-
-    order.setState(OrderState.COMPLETED);
-  }
-
-
-  @Transactional
   public void cancelOrder(Order order) throws OrderServiceException {
-    if (order.getState() == OrderState.CANCELLED) {
-      throw new OrderServiceException("Order is already cancelled.");
-    }
-
-    if (order.getState() == OrderState.OPEN) {
-      throw new OrderServiceException("Cannot cancel an already confirmed order.");
+    if (order.getState() != OrderState.DRAFT) {
+      throw new OrderServiceException("Cannot cancel an order that is not in the DRAFT state.");
     }
 
     order.setState(OrderState.CANCELLED);
@@ -129,16 +124,24 @@ public class OrderService {
   }
 
   public Order getOrderById(Long orderId) throws OrderServiceException {
-    return orderRepository.findById(orderId)
-        .orElseThrow(() -> new OrderServiceException("Order not found."));
-  }
-  public OrderItem getOrderItemById(Long itemId) throws OrderServiceException {
-    Optional<OrderItem> orderItemOptional = orderItemRepository.findById(itemId);
-    if (orderItemOptional.isPresent()) {
-      return orderItemOptional.get();
-    } else {
-      throw new OrderServiceException("Order item not found.");
+    Optional<Order> optionalOrder = orderRepository.findById(orderId);
+    if (optionalOrder.isEmpty()) {
+      throw new OrderServiceException("Order not found with ID: " + orderId);
     }
+    return optionalOrder.get();
   }
-}
 
+  public void completeOrder(Long orderId) throws OrderServiceException {
+    Order order = getOrderById(orderId);
+
+    // Check if the order is already completed
+    if (order.getState() == OrderState.COMPLETED) {
+      throw new OrderServiceException("Order is already completed.");
+    }
+
+    order.setState(OrderState.COMPLETED);
+
+    orderRepository.save(order);
+  }
+
+}
