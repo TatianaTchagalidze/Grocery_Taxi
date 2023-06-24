@@ -9,6 +9,7 @@ import com.example.grocery_taxi.model.OrderState;
 import com.example.grocery_taxi.repository.OrderItemRepository;
 import com.example.grocery_taxi.repository.OrderRepository;
 import com.example.grocery_taxi.repository.ProductRepository;
+import com.example.grocery_taxi.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,18 +24,30 @@ public class OrderService {
   private final OrderRepository orderRepository;
   private final ProductRepository productRepository;
 
+  private final UserRepository userRepository;
+
+
   @Autowired
-  public OrderService(OrderRepository orderRepository, ProductRepository productRepository) {
+  public OrderService(OrderRepository orderRepository, ProductRepository productRepository, UserRepository userRepository) {
     this.orderRepository = orderRepository;
     this.productRepository = productRepository;
+    this.userRepository = userRepository;
   }
 
-  public Order createOrder(User user) {
+  public Order createOrder(Long userId) throws OrderServiceException {
+    Optional<User> optionalUser = userRepository.findById(userId);
+    if (optionalUser.isEmpty()) {
+      throw new OrderServiceException("User not found with ID: " + userId);
+    }
+
+    User user = optionalUser.get();
+
     Order order = new Order();
-    order.setUser(user);  // Set the user for the order
+    order.setUser(user);
     order.setState(OrderState.DRAFT);
     order.setTotalAmount(BigDecimal.ZERO);
-    order.setEditable(true); // Set the initial state as editable
+    order.setEditable(true);
+
     return orderRepository.save(order);
   }
 

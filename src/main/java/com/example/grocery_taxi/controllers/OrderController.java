@@ -31,10 +31,11 @@ public class OrderController {
   }
 
   @PostMapping
-  public ResponseEntity<Order> createOrder(HttpServletRequest request) {
+  public ResponseEntity<Order> createOrder(HttpServletRequest request)
+      throws OrderServiceException {
     User authenticatedUser = jwtAuthenticationFilter.getAuthenticatedUserFromTokenInCookies(request);
     if (authenticatedUser != null) {
-      Order order = orderService.createOrder(authenticatedUser);
+      Order order = orderService.createOrder(authenticatedUser.getId());
       return ResponseEntity.ok(order);
     }
     return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
