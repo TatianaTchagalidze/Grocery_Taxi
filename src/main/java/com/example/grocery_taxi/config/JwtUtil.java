@@ -1,18 +1,17 @@
 package com.example.grocery_taxi.config;
 
-
-import io.jsonwebtoken.JwsHeader;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
-import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.security.Key;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Date;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class JwtUtil {
@@ -24,51 +23,44 @@ public class JwtUtil {
 
   public String generateToken(String username) {
     String secretKey = getOrCreateSecretKey(username); // Get or create a secret key for the user
-
-    // Build JWT token
+    Key key = Keys.hmacShaKeyFor(Base64.getDecoder().decode(secretKey));
     return Jwts.builder()
-        .setHeaderParam(JwsHeader.TYPE, JwsHeader.JWT_TYPE)
+        .setHeaderParam("kid", secretKey)
         .setSubject(username)
         .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
-        .signWith(Keys.hmacShaKeyFor(secretKey.getBytes()), SignatureAlgorithm.HS256)
+        .signWith(key)
         .compact();
   }
 
   public boolean validateToken(String token) {
     try {
-      String username = extractUsernameFromToken(token);
-      String secretKey = secretKeyMap.get(username); // Retrieve the secret key for the user
-
-      if (secretKey != null) {
-        Jwts.parserBuilder()
-            .setSigningKey(Keys.hmacShaKeyFor(secretKey.getBytes()))
-            .build()
-            .parseClaimsJws(token);
-        return true;
-      }
+      Key key = getKeyFromToken(token);
+      Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
+      return true;
     } catch (Exception e) {
-      // Token validation failed
+      return false;
     }
-    return false;
   }
 
   public String extractUsernameFromToken(String token) {
-    return Jwts.parserBuilder()
-        .build()
-        .parseClaimsJws(token)
-        .getBody()
-        .getSubject();
+    Key key = getKeyFromToken(token);
+    Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+    return claims.getSubject();
+  }
+
+  private Key getKeyFromToken(String token) {
+    String secretKey = secretKeyMap.get(Jwts.parser().parseClaimsJws(token).getHeader().get("kid"));
+    return Keys.hmacShaKeyFor(Base64.getDecoder().decode(secretKey));
   }
 
   private String getOrCreateSecretKey(String username) {
-    return secretKeyMap.computeIfAbsent(username, key -> generateNewSecretKey());
+    return secretKeyMap.computeIfAbsent(username, k -> generateSecretKey());
   }
 
-  private String generateNewSecretKey() {
-    // Generate a new secret key
-    byte[] keyBytes = new byte[64];
-    new SecureRandom().nextBytes(keyBytes);
+  private String generateSecretKey() {
+    SecureRandom secureRandom = new SecureRandom();
+    byte[] keyBytes = new byte[32];
+    secureRandom.nextBytes(keyBytes);
     return Base64.getEncoder().encodeToString(keyBytes);
   }
 }
-

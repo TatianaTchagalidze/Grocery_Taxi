@@ -23,9 +23,7 @@ public class OrderService {
 
   private final OrderRepository orderRepository;
   private final ProductRepository productRepository;
-
   private final UserRepository userRepository;
-
 
   @Autowired
   public OrderService(OrderRepository orderRepository, ProductRepository productRepository, UserRepository userRepository) {
@@ -51,7 +49,6 @@ public class OrderService {
     return orderRepository.save(order);
   }
 
-
   public void addOrderItem(Order order, Long productId, int quantity) throws OrderServiceException {
     Optional<Product> optionalProduct = productRepository.findById(productId);
     if (optionalProduct.isEmpty()) {
@@ -68,10 +65,16 @@ public class OrderService {
     orderItem.setOrder(order);
     orderItem.setProduct(product);
     orderItem.setQuantity(quantity);
-    orderItem.setAmount(product.getPrice().multiply(BigDecimal.valueOf(quantity)));
+
+    BigDecimal productPrice = product.getPrice();
+    BigDecimal amount = productPrice != null ? productPrice.multiply(BigDecimal.valueOf(quantity)) : BigDecimal.ZERO;
+    orderItem.setAmount(amount);
 
     order.getOrderItems().add(orderItem);
-    order.setTotalAmount(order.getTotalAmount().add(orderItem.getAmount()));
+
+    BigDecimal totalAmount = order.getTotalAmount();
+    totalAmount = totalAmount != null ? totalAmount.add(amount) : amount;
+    order.setTotalAmount(totalAmount);
 
     orderRepository.save(order);
   }
@@ -91,9 +94,19 @@ public class OrderService {
     BigDecimal oldAmount = orderItem.getAmount();
 
     orderItem.setQuantity(quantity);
-    orderItem.setAmount(orderItem.getProduct().getPrice().multiply(BigDecimal.valueOf(quantity)));
 
-    BigDecimal totalAmount = order.getTotalAmount().subtract(oldAmount).add(orderItem.getAmount());
+    BigDecimal productPrice = orderItem.getProduct().getPrice();
+    BigDecimal newAmount = productPrice != null ? productPrice.multiply(BigDecimal.valueOf(quantity)) : BigDecimal.ZERO;
+    orderItem.setAmount(newAmount);
+
+    BigDecimal totalAmount = order.getTotalAmount();
+    if (totalAmount != null && oldAmount != null) {
+      totalAmount = totalAmount.subtract(oldAmount).add(newAmount);
+    } else if (totalAmount == null && oldAmount != null) {
+      totalAmount = newAmount;
+    } else {
+      totalAmount = BigDecimal.ZERO;
+    }
     order.setTotalAmount(totalAmount);
 
     orderRepository.save(order);
@@ -104,8 +117,12 @@ public class OrderService {
       throw new OrderServiceException("Invalid order item: " + orderItem.getId());
     }
 
+    BigDecimal amount = orderItem.getAmount();
+    if (amount != null) {
+      order.setTotalAmount(order.getTotalAmount().subtract(amount));
+    }
+
     order.getOrderItems().remove(orderItem);
-    order.setTotalAmount(order.getTotalAmount().subtract(orderItem.getAmount()));
 
     orderRepository.save(order);
   }
@@ -119,6 +136,16 @@ public class OrderService {
       throw new OrderServiceException("Cannot confirm an order without any items.");
     }
 
+    BigDecimal totalAmount = BigDecimal.ZERO;
+
+    for (OrderItem orderItem : order.getOrderItems()) {
+      BigDecimal amount = orderItem.getAmount();
+      if (amount != null) {
+        totalAmount = totalAmount.add(amount);
+      }
+    }
+
+    order.setTotalAmount(totalAmount);
     order.setState(OrderState.OPEN);
     order.setEditable(false); // Disable editing of the order
 
@@ -156,5 +183,4 @@ public class OrderService {
 
     orderRepository.save(order);
   }
-
 }

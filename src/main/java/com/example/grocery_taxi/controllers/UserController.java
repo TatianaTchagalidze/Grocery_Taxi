@@ -1,5 +1,6 @@
 package com.example.grocery_taxi.controllers;
 
+import com.example.grocery_taxi.config.JwtUtil;
 import com.example.grocery_taxi.dto.LoginRequestDto;
 import com.example.grocery_taxi.dto.UserDto;
 import com.example.grocery_taxi.entity.User;
@@ -31,11 +32,14 @@ public class UserController {
   private final AuthenticationService authenticationService;
   private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
+  private final JwtUtil jwtUtil;
+
   public UserController(UserService userService, AuthenticationService authenticationService,
-                        JwtAuthenticationFilter jwtAuthenticationFilter) {
+                        JwtAuthenticationFilter jwtAuthenticationFilter, JwtUtil jwtUtil) {
     this.userService = userService;
     this.authenticationService = authenticationService;
     this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+    this.jwtUtil = jwtUtil;
   }
 
   @PostMapping("/login")
@@ -50,7 +54,7 @@ public class UserController {
     boolean isAuthenticated = authenticationService.authenticateUser(loginRequestDtoForm.getEmail(),
         loginRequestDtoForm.getPassword());
     if (isAuthenticated) {
-      String token = jwtAuthenticationFilter.generateToken(loginRequestDtoForm.getPassword());
+      String token = jwtUtil.generateToken(loginRequestDtoForm.getEmail()); // Use the email as the username
       jwtAuthenticationFilter.saveTokenInCookies(request, response, token);
 
       return ResponseEntity.ok().build();
@@ -59,6 +63,7 @@ public class UserController {
     // Authentication failed
     return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
   }
+
 
 
   @GetMapping("/logout")

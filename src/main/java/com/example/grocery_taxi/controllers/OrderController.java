@@ -5,12 +5,15 @@ import com.example.grocery_taxi.entity.OrderItem;
 import com.example.grocery_taxi.entity.User;
 import com.example.grocery_taxi.exception.OrderItemServiceException;
 import com.example.grocery_taxi.exception.OrderServiceException;
+import com.example.grocery_taxi.repository.UserRepository;
 import com.example.grocery_taxi.service.OrderItemService;
 import com.example.grocery_taxi.service.OrderService;
 import com.example.grocery_taxi.filter.JwtAuthenticationFilter;
+import com.example.grocery_taxi.config.JwtUtil;
 
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
-
+import javax.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,38 +26,64 @@ public class OrderController {
   private final JwtAuthenticationFilter jwtAuthenticationFilter;
   private final OrderItemService orderItemService;
 
+  private final UserRepository userRepository;
+  private final JwtUtil jwtUtil;
+
   @Autowired
-  public OrderController(OrderService orderService, JwtAuthenticationFilter jwtAuthenticationFilter, OrderItemService orderItemService) {
+  public OrderController(OrderService orderService, JwtAuthenticationFilter jwtAuthenticationFilter, OrderItemService orderItemService, UserRepository userRepository, JwtUtil jwtUtil) {
     this.orderService = orderService;
     this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     this.orderItemService = orderItemService;
+    this.userRepository = userRepository;
+    this.jwtUtil = jwtUtil;
   }
 
   @PostMapping
-  public ResponseEntity<Order> createOrder(HttpServletRequest request)
-      throws OrderServiceException {
-    User authenticatedUser = jwtAuthenticationFilter.getAuthenticatedUserFromTokenInCookies(request);
-    if (authenticatedUser != null) {
-      Order order = orderService.createOrder(authenticatedUser.getId());
-      return ResponseEntity.ok(order);
+  public ResponseEntity<Order> createOrder(HttpServletRequest request, HttpServletResponse response) throws OrderServiceException {
+    Cookie[] cookies = request.getCookies();
+    if (cookies != null) {
+      String token = jwtAuthenticationFilter.extractTokenFromCookies(cookies);
+      if (token != null && jwtUtil.validateToken(token)) {
+        try {
+          String username = jwtUtil.extractUsernameFromToken(token);
+          User authenticatedUser = userRepository.findByEmail(username).orElse(null);
+          if (authenticatedUser != null) {
+            Order order = orderService.createOrder(authenticatedUser.getId());
+            return ResponseEntity.ok(order);
+          }
+        } catch (Exception e) {
+          jwtAuthenticationFilter.removeTokenFromCookies(response);
+        }
+      }
     }
     return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
   }
 
+
+
   @PostMapping("/{orderId}/items")
-  public ResponseEntity<String> addOrderItem(@PathVariable Long orderId, @RequestBody AddOrderItemRequest request) {
-    try {
-      Order order = orderService.getOrderById(orderId);
-      Long productId = request.getProductId();
-      int quantity = request.getQuantity();
+  public ResponseEntity<String> addOrderItem(@PathVariable Long orderId, @RequestBody AddOrderItemRequest request, HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
+    String token = jwtAuthenticationFilter.extractTokenFromCookies(httpRequest.getCookies());
+    User authenticatedUser = jwtAuthenticationFilter.getAuthenticatedUserFromTokenInCookies(token);
 
-      orderService.addOrderItem(order, productId, quantity);
+    if (authenticatedUser != null) {
+      try {
+        Order order = orderService.getOrderById(orderId);
+        Long productId = request.getProductId();
+        int quantity = request.getQuantity();
 
-      return ResponseEntity.ok("Order item added successfully.");
-    } catch (OrderServiceException e) {
-      return ResponseEntity.badRequest().body(e.getMessage());
+        orderService.addOrderItem(order, productId, quantity);
+
+        return ResponseEntity.ok("Order item added successfully.");
+      } catch (OrderServiceException e) {
+        return ResponseEntity.badRequest().body(e.getMessage());
+      }
+    } else {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
     }
   }
+
+
 
   @PutMapping("/{orderId}/items/{itemId}")
   public ResponseEntity<String> updateOrderItemQuantity(@PathVariable Long orderId, @PathVariable Long itemId, @RequestBody UpdateOrderItemRequest request) {
