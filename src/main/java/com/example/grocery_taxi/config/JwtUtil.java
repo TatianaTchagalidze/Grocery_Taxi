@@ -7,34 +7,34 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
-import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Date;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 @Component
 public class JwtUtil {
 
-  private Map<String, String> secretKeyMap = new ConcurrentHashMap<>(); // Map to store secret keys for each user
+  private String secretKey; // Secret key for all users
 
   @Value("${jwt.expiration-time}")
   private long expirationTime;
 
+  public JwtUtil(@Value("${jwt.secret-key}") String secretKey) {
+    this.secretKey = secretKey;
+  }
+
   public String generateToken(String username) {
-    String secretKey = getOrCreateSecretKey(username); // Get or create a secret key for the user
     Key key = Keys.hmacShaKeyFor(Base64.getDecoder().decode(secretKey));
     return Jwts.builder()
-        .setHeaderParam("kid", secretKey)
         .setSubject(username)
-        .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
+        .setExpiration(new Date(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(expirationTime)))
         .signWith(key)
         .compact();
   }
 
   public boolean validateToken(String token) {
     try {
-      Key key = getKeyFromToken(token);
+      Key key = Keys.hmacShaKeyFor(Base64.getDecoder().decode(secretKey));
       Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
       return true;
     } catch (Exception e) {
@@ -43,24 +43,9 @@ public class JwtUtil {
   }
 
   public String extractUsernameFromToken(String token) {
-    Key key = getKeyFromToken(token);
+    Key key = Keys.hmacShaKeyFor(Base64.getDecoder().decode(secretKey));
     Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
     return claims.getSubject();
   }
 
-  private Key getKeyFromToken(String token) {
-    String secretKey = secretKeyMap.get(Jwts.parser().parseClaimsJws(token).getHeader().get("kid"));
-    return Keys.hmacShaKeyFor(Base64.getDecoder().decode(secretKey));
-  }
-
-  private String getOrCreateSecretKey(String username) {
-    return secretKeyMap.computeIfAbsent(username, k -> generateSecretKey());
-  }
-
-  private String generateSecretKey() {
-    SecureRandom secureRandom = new SecureRandom();
-    byte[] keyBytes = new byte[32];
-    secureRandom.nextBytes(keyBytes);
-    return Base64.getEncoder().encodeToString(keyBytes);
-  }
 }

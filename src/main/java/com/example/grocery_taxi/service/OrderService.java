@@ -6,7 +6,6 @@ import com.example.grocery_taxi.entity.Product;
 import com.example.grocery_taxi.entity.User;
 import com.example.grocery_taxi.exception.OrderServiceException;
 import com.example.grocery_taxi.model.OrderState;
-import com.example.grocery_taxi.repository.OrderItemRepository;
 import com.example.grocery_taxi.repository.OrderRepository;
 import com.example.grocery_taxi.repository.ProductRepository;
 import com.example.grocery_taxi.repository.UserRepository;
@@ -78,6 +77,7 @@ public class OrderService {
 
     orderRepository.save(order);
   }
+
 
   public void updateOrderItemQuantity(OrderItem orderItem, int quantity) throws OrderServiceException {
     Order order = orderItem.getOrder();

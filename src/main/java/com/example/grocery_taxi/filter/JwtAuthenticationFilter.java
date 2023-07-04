@@ -1,7 +1,6 @@
 package com.example.grocery_taxi.filter;
 
 import com.example.grocery_taxi.config.JwtUtil;
-import com.example.grocery_taxi.controllers.AddOrderItemRequest;
 import com.example.grocery_taxi.entity.User;
 import com.example.grocery_taxi.repository.UserRepository;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,7 +18,9 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
+import org.springframework.stereotype.Component;
 
+@Component
 public class JwtAuthenticationFilter extends BasicAuthenticationFilter {
 
   private final JwtUtil jwtUtil;

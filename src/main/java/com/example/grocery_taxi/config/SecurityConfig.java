@@ -39,6 +39,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         .antMatchers("/users").permitAll()
         .antMatchers("/health").permitAll()
         .antMatchers("/login").permitAll()
+        .antMatchers("/orders").permitAll()
         .anyRequest().permitAll()
         .and()
         .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
@@ -51,7 +52,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     auth.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder());
   }
 
-  @Bean
   public JwtAuthenticationFilter jwtAuthenticationFilter() throws Exception {
     return new JwtAuthenticationFilter(authenticationManager(), jwtUtil, userRepository);
   }
