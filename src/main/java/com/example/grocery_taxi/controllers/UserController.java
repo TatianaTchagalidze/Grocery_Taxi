@@ -41,8 +41,7 @@ public class UserController {
     this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     this.jwtUtil = jwtUtil;
   }
-
-
+  @CrossOrigin(origins = "http://localhost:63342")
   @PostMapping("/login")
   @ResponseStatus(HttpStatus.OK)
   public ResponseEntity<?> login(HttpServletRequest request, HttpServletResponse response,
@@ -66,7 +65,7 @@ public class UserController {
   }
 
 
-
+  @CrossOrigin(origins = "http://localhost:63342")
   @GetMapping("/logout")
   public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response) {
     // Remove the JWT token from cookies using JwtAuthenticationFilter
@@ -75,8 +74,7 @@ public class UserController {
     return ResponseEntity.ok("Logout successful");
   }
 
-
-
+  @CrossOrigin(origins = "http://localhost:63342")
   @PostMapping("/users")
   public ResponseEntity<?> registerUser(@Valid @RequestBody UserDto userDto, BindingResult bindingResult) {
     // Check if email already exists
