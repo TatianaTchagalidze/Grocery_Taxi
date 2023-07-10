@@ -42,6 +42,7 @@ public class UserController {
     this.jwtUtil = jwtUtil;
   }
 
+
   @PostMapping("/login")
   @ResponseStatus(HttpStatus.OK)
   public ResponseEntity<?> login(HttpServletRequest request, HttpServletResponse response,
@@ -74,6 +75,8 @@ public class UserController {
     return ResponseEntity.ok("Logout successful");
   }
 
+
+
   @PostMapping("/users")
   public ResponseEntity<?> registerUser(@Valid @RequestBody UserDto userDto, BindingResult bindingResult) {
     // Check if email already exists
@@ -99,6 +102,7 @@ public class UserController {
     }
 
     User createdUser = userService.registerUser(userDto);
+    createdUser.setPassword(null);
 
     return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
   }
