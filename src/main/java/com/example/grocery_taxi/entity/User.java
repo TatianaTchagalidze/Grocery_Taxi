@@ -7,6 +7,7 @@ import javax.persistence.*;
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
+import net.minidev.json.annotate.JsonIgnore;
 
 @Entity
 @Data
@@ -16,7 +17,7 @@ import javax.validation.constraints.Size;
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private int id;
 
     @NotBlank
     @Email
@@ -32,10 +33,10 @@ public class User {
     private UserRole role;
 
     @NotBlank
+    @JsonIgnore
     @Size(min = 8)
     private String password;
 
     public User() {
-
     }
 }

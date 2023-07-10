@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -31,7 +32,7 @@ public class OrderService {
     this.userRepository = userRepository;
   }
 
-  public Order createOrder(Long userId) throws OrderServiceException {
+  public Order createOrder(int userId) throws OrderServiceException {
     Optional<User> optionalUser = userRepository.findById(userId);
     if (optionalUser.isEmpty()) {
       throw new OrderServiceException("User not found with ID: " + userId);
@@ -48,7 +49,7 @@ public class OrderService {
     return orderRepository.save(order);
   }
 
-  public void addOrderItem(Order order, Long productId, int quantity) throws OrderServiceException {
+  public void addOrderItem(Order order, int productId, int quantity) throws OrderServiceException {
     Optional<Product> optionalProduct = productRepository.findById(productId);
     if (optionalProduct.isEmpty()) {
       throw new OrderServiceException("Product not found with ID: " + productId);
@@ -71,13 +72,10 @@ public class OrderService {
 
     order.getOrderItems().add(orderItem);
 
-    BigDecimal totalAmount = order.getTotalAmount();
-    totalAmount = totalAmount != null ? totalAmount.add(amount) : amount;
-    order.setTotalAmount(totalAmount);
+    updateTotalAmount(order); // Update the total amount
 
     orderRepository.save(order);
   }
-
 
   public void updateOrderItemQuantity(OrderItem orderItem, int quantity) throws OrderServiceException {
     Order order = orderItem.getOrder();
@@ -92,6 +90,7 @@ public class OrderService {
     }
 
     BigDecimal oldAmount = orderItem.getAmount();
+    int oldQuantity = orderItem.getQuantity();
 
     orderItem.setQuantity(quantity);
 
@@ -101,6 +100,7 @@ public class OrderService {
 
     BigDecimal totalAmount = order.getTotalAmount();
     if (totalAmount != null && oldAmount != null) {
+      // Subtract the old item amount and add the new item amount to the total amount
       totalAmount = totalAmount.subtract(oldAmount).add(newAmount);
     } else if (totalAmount == null && oldAmount != null) {
       totalAmount = newAmount;
@@ -109,7 +109,11 @@ public class OrderService {
     }
     order.setTotalAmount(totalAmount);
 
-    orderRepository.save(order);
+    // Adjust the available quantity of the product
+    int quantityDifference = oldQuantity - quantity;
+    orderItem.getProduct().setAvailableQuantity(availableQuantity + quantityDifference);
+
+    orderRepository.save(order); // Save the order entity
   }
 
   public void removeOrderItem(Order order, OrderItem orderItem) throws OrderServiceException {
@@ -163,7 +167,7 @@ public class OrderService {
     orderRepository.save(order);
   }
 
-  public Order getOrderById(Long orderId) throws OrderServiceException {
+  public Order getOrderById(int orderId) throws OrderServiceException {
     Optional<Order> optionalOrder = orderRepository.findById(orderId);
     if (optionalOrder.isEmpty()) {
       throw new OrderServiceException("Order not found with ID: " + orderId);
@@ -171,11 +175,11 @@ public class OrderService {
     return optionalOrder.get();
   }
 
-  public void completeOrder(Long orderId) throws OrderServiceException {
+  public void completeOrder(int orderId) throws OrderServiceException {
     Order order = getOrderById(orderId);
 
     // Check if the order is already completed
-    if (order.getState() == OrderState.COMPLETED) {
+    if (order.getState()== OrderState.COMPLETED) {
       throw new OrderServiceException("Order is already completed.");
     }
 
@@ -183,4 +187,59 @@ public class OrderService {
 
     orderRepository.save(order);
   }
+
+  public void updateOrderTotalAmount(Order order, BigDecimal totalAmount) {
+    order.setTotalAmount(totalAmount);
+    orderRepository.save(order);
+  }
+
+  public List<Order> getOrdersByState(OrderState orderState) {
+    return orderRepository.findByOrderState(orderState);
+  }
+
+  private void updateTotalAmount(Order order) {
+    BigDecimal totalAmount = BigDecimal.ZERO;
+    for (OrderItem orderItem : order.getOrderItems()) {
+      BigDecimal amount = orderItem.getAmount();
+      if (amount != null) {
+        totalAmount = totalAmount.add(amount);
+      }
+    }
+    order.setTotalAmount(totalAmount);
+  }
+
+  public void closeOrderByConsumer(Order order) throws OrderServiceException {
+    if (order.getState() != OrderState.CONFIRMED && order.getState() != OrderState.IN_PROGRESS) {
+      throw new OrderServiceException("Order cannot be closed by the consumer at this state.");
+    }
+
+    order.setClosed(true);
+    order.setState(OrderState.CLOSED);
+
+    orderRepository.save(order);
+  }
+
+  public void closeOrderByCourier(Order order) throws OrderServiceException {
+    if (order.getState() != OrderState.IN_PROGRESS) {
+      throw new OrderServiceException("Order cannot be closed by the courier at this state.");
+    }
+
+    order.setClosed(true);
+    order.setState(OrderState.CLOSED);
+
+    orderRepository.save(order);
+  }
+
+  public void reopenOrder(Order order) throws OrderServiceException {
+    if (!order.isClosed()) {
+      throw new OrderServiceException("Order is not closed. Cannot reopen.");
+    }
+
+    order.setClosed(false);
+    order.setState(OrderState.OPEN);
+
+    orderRepository.save(order);
+  }
+
 }
+

@@ -20,7 +20,7 @@ public class OrderItemService {
     this.orderItemRepository = orderItemRepository;
   }
 
-  public OrderItem getOrderItemById(Long itemId) throws OrderItemServiceException {
+  public OrderItem getOrderItemById(int itemId) throws OrderItemServiceException {
     Optional<OrderItem> optionalOrderItem = orderItemRepository.findById(itemId);
     if (optionalOrderItem.isEmpty()) {
       throw new OrderItemServiceException("Invalid order item ID: " + itemId);

@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class JwtUtil {
 
-  private String secretKey; // Secret key for all users
+  private String secretKey;
 
   @Value("${jwt.expiration-time}")
   private long expirationTime;

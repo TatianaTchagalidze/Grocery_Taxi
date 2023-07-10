@@ -1,20 +1,23 @@
 package com.example.grocery_taxi.entity;
 
 import com.example.grocery_taxi.model.OrderState;
-import lombok.Data;
+
 
 import javax.persistence.*;
 import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.Set;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(name = "orders")
-@Data
+@Getter
+@Setter
 public class Order {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Long id;
+  private int id;
 
   @ManyToOne
   @JoinColumn(name = "user_id")
@@ -51,5 +54,17 @@ public class Order {
 
   public Set<OrderItem> getOrderItems() {
     return orderItems;
+  }
+
+  public boolean isClosed() {
+    return orderState == OrderState.CLOSED;
+  }
+
+  public void setClosed(boolean closed) {
+    if (closed) {
+      orderState = OrderState.CLOSED;
+    } else {
+      throw new IllegalStateException("Cannot set order as not closed.");
+    }
   }
 }

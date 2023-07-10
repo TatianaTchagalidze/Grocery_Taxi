@@ -4,6 +4,8 @@ public enum OrderState {
   DRAFT,
   OPEN,
   CONFIRMED,
+  IN_PROGRESS,
+  COMPLETED,
   CANCELLED,
-  COMPLETED
+  CLOSED
 }

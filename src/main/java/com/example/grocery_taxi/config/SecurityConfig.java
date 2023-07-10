@@ -5,6 +5,7 @@ import com.example.grocery_taxi.repository.UserRepository;
 import com.example.grocery_taxi.security.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -39,7 +40,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         .antMatchers("/users").permitAll()
         .antMatchers("/health").permitAll()
         .antMatchers("/login").permitAll()
-        .antMatchers("/orders").permitAll()
+        .antMatchers(HttpMethod.POST, "/orders").authenticated()
+        .antMatchers(HttpMethod.PUT, "/orders/**").authenticated()
+        .antMatchers(HttpMethod.DELETE, "/orders/**").authenticated()
         .anyRequest().permitAll()
         .and()
         .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)

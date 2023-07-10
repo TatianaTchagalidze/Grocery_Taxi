@@ -20,14 +20,4 @@ public class ProductService {
     return productRepository.findAll();
   }
 
-  public int getAvailableQuantity(Product product) {
-    return product.getAvailableQuantity();
-  }
-
-  public Product getProductById(Long productId) {
-    return productRepository.findById(productId)
-        .orElseThrow(() -> new IllegalArgumentException("Product not found"));
-  }
-
-
 }
