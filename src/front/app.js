@@ -12,7 +12,12 @@ sign_in_btn.addEventListener("click", () => {
 
 // Registration form
 const registrationForm = document.getElementById('registration-form');
+const loginForm = document.getElementById('login-form');
+
+
 registrationForm.addEventListener('submit', registerUser);
+loginForm.addEventListener('submit', loginUser);
+
 
 function registerUser(event) {
   event.preventDefault();
@@ -33,7 +38,7 @@ function registerUser(event) {
     role: role
   };
 
-  fetch('http://localhost:8080/users', {
+fetch('http://localhost:8080/users', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -44,6 +49,8 @@ function registerUser(event) {
       if (response.status === 200) {
         // Empty response, registration success
         console.log('Registration success');
+        // Redirect to sign-in page
+        window.location.href = 'index.html#sign-in';
         return;
       }
       if (!response.ok) {
@@ -60,10 +67,6 @@ function registerUser(event) {
       console.error(error);
     });
 }
-
-// Login form
-const loginForm = document.getElementById('login-form');
-loginForm.addEventListener('submit', loginUser);
 
 function loginUser(event) {
   event.preventDefault();
