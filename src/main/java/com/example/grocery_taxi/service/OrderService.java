@@ -6,6 +6,7 @@ import com.example.grocery_taxi.entity.Product;
 import com.example.grocery_taxi.entity.User;
 import com.example.grocery_taxi.exception.OrderServiceException;
 import com.example.grocery_taxi.model.OrderState;
+import com.example.grocery_taxi.model.UserRole;
 import com.example.grocery_taxi.repository.OrderRepository;
 import com.example.grocery_taxi.repository.ProductRepository;
 import com.example.grocery_taxi.repository.UserRepository;
@@ -40,15 +41,28 @@ public class OrderService {
 
     User user = optionalUser.get();
 
+    if (user.getRole() == UserRole.Courier) {
+      throw new OrderServiceException("Couriers are not allowed to create orders.");
+    }
+
     Order order = new Order();
     order.setUser(user);
     order.setState(OrderState.DRAFT);
     order.setEditable(true);
+    order.setTotalAmount(BigDecimal.ZERO);
 
     return orderRepository.save(order);
   }
 
-  public void addOrderItem(Order order, int productId, int quantity) throws OrderServiceException {
+
+  public void addOrderItem(int orderId, int productId, int quantity) throws OrderServiceException {
+    Optional<Order> optionalOrder = orderRepository.findById(orderId);
+    if (optionalOrder.isEmpty()) {
+      throw new OrderServiceException("Order not found with ID: " + orderId);
+    }
+
+    Order order = optionalOrder.get();
+
     Optional<Product> optionalProduct = productRepository.findById(productId);
     if (optionalProduct.isEmpty()) {
       throw new OrderServiceException("Product not found with ID: " + productId);
@@ -64,7 +78,6 @@ public class OrderService {
     orderItem.setOrder(order);
     orderItem.setProduct(product);
     orderItem.setQuantity(quantity);
-    orderItem.setAmount();
 
     BigDecimal productPrice = product.getPrice();
     BigDecimal amount = productPrice != null ? productPrice.multiply(BigDecimal.valueOf(quantity)) : BigDecimal.ZERO;
@@ -77,36 +90,23 @@ public class OrderService {
     orderRepository.save(order);
   }
 
-  public void updateOrderItemQuantity(OrderItem orderItem, int quantity) throws OrderServiceException {
-    Order order = orderItem.getOrder();
-
-    if (!order.isEditable()) {
-      throw new OrderServiceException("Order is not editable. Cannot update order item quantity.");
+  public void removeOrderItem(int orderId, int itemId) throws OrderServiceException {
+    Optional<Order> optionalOrder = orderRepository.findById(orderId);
+    if (optionalOrder.isEmpty()) {
+      throw new OrderServiceException("Order not found with ID: " + orderId);
     }
 
-    int availableQuantity = orderItem.getProduct().getAvailableQuantity();
-    if (quantity > availableQuantity) {
-      throw new OrderServiceException("Requested quantity exceeds available quantity for product: " + orderItem.getProduct().getName());
+    Order order = optionalOrder.get();
+
+    Optional<OrderItem> optionalOrderItem = order.getOrderItems().stream()
+        .filter(orderItem -> orderItem.getId() == itemId)
+        .findFirst();
+
+    if (optionalOrderItem.isEmpty()) {
+      throw new OrderServiceException("Invalid order item: " + itemId);
     }
 
-    int oldQuantity = orderItem.getQuantity();
-
-    orderItem.setQuantity(quantity);
-
-    updateOrderAmounts(order);
-
-    // Adjust the available quantity of the product
-    int quantityDifference = oldQuantity - quantity;
-    orderItem.getProduct().setAvailableQuantity(availableQuantity + quantityDifference);
-
-    orderRepository.save(order); // Save the order entity
-  }
-
-  public void removeOrderItem(Order order, OrderItem orderItem) throws OrderServiceException {
-    if (!order.getOrderItems().contains(orderItem)) {
-      throw new OrderServiceException("Invalid order item: " + orderItem.getId());
-    }
-
+    OrderItem orderItem = optionalOrderItem.get();
     order.getOrderItems().remove(orderItem);
 
     updateOrderAmounts(order);
@@ -114,7 +114,14 @@ public class OrderService {
     orderRepository.save(order);
   }
 
-  public void confirmOrder(Order order) throws OrderServiceException {
+  public void confirmOrder(int orderId) throws OrderServiceException {
+    Optional<Order> optionalOrder = orderRepository.findById(orderId);
+    if (optionalOrder.isEmpty()) {
+      throw new OrderServiceException("Order not found with ID: " + orderId);
+    }
+
+    Order order = optionalOrder.get();
+
     if (order.getState() != OrderState.DRAFT) {
       throw new OrderServiceException("Cannot confirm an order that is not in the DRAFT state.");
     }
@@ -131,7 +138,14 @@ public class OrderService {
     orderRepository.save(order);
   }
 
-  public void cancelOrder(Order order) throws OrderServiceException {
+  public void cancelOrder(int orderId) throws OrderServiceException {
+    Optional<Order> optionalOrder = orderRepository.findById(orderId);
+    if (optionalOrder.isEmpty()) {
+      throw new OrderServiceException("Order not found with ID: " + orderId);
+    }
+
+    Order order = optionalOrder.get();
+
     if (order.getState() != OrderState.DRAFT) {
       throw new OrderServiceException("Cannot cancel an order that is not in the DRAFT state.");
     }
@@ -142,53 +156,27 @@ public class OrderService {
     orderRepository.save(order);
   }
 
-  public Order getOrderById(int orderId) throws OrderServiceException {
-    Optional<Order> optionalOrder = orderRepository.findById(orderId);
-    if (optionalOrder.isEmpty()) {
-      throw new OrderServiceException("Order not found with ID: " + orderId);
-    }
-    return optionalOrder.get();
-  }
-
-  public void completeOrder(int orderId) throws OrderServiceException {
+  public void closeOrder(int orderId, UserRole userRole) throws OrderServiceException {
     Order order = getOrderById(orderId);
 
-    // Check if the order is already completed
-    if (order.getState() == OrderState.COMPLETED) {
-      throw new OrderServiceException("Order is already completed.");
+    if (userRole == UserRole.Customer) {
+      closeOrderByCustomer(order);
+    } else if (userRole == UserRole.Courier) {
+      closeOrderByCourier(order);
+    } else {
+      throw new OrderServiceException("User does not have permission to close the order.");
     }
-
-    order.setState(OrderState.COMPLETED);
-
-    orderRepository.save(order);
   }
 
-  public void updateOrderTotalAmount(Order order, BigDecimal totalAmount) {
-    order.setTotalAmount(totalAmount);
-    orderRepository.save(order);
-  }
-
-  public List<Order> getOpenOrders() {
-    return orderRepository.findByOrderState(OrderState.OPEN);
-  }
-
-  private void updateOrderAmounts(Order order) {
-    OrderCalculator calculator = new OrderCalculator();
-    calculator.calculateOrderAmounts(order);
-  }
-
-  public void closeOrderByConsumer(Order order) throws OrderServiceException {
+  public void closeOrderByCustomer(Order order) throws OrderServiceException {
     if (order.getState() != OrderState.CONFIRMED && order.getState() != OrderState.IN_PROGRESS) {
-      throw new OrderServiceException("Order cannot be closed by the consumer at this state.");
+      throw new OrderServiceException("Order cannot be closed by the customer at this state.");
     }
 
     order.setClosed(true);
     order.setState(OrderState.CLOSED);
 
     orderRepository.save(order);
-  }
-  public List<Order> getOrdersByState(OrderState orderState) {
-    return orderRepository.findByOrderState(orderState);
   }
 
   public void closeOrderByCourier(Order order) throws OrderServiceException {
@@ -202,7 +190,21 @@ public class OrderService {
     orderRepository.save(order);
   }
 
-  public void reopenOrder(Order order) throws OrderServiceException {
+  public Order getOrderById(int orderId) throws OrderServiceException {
+    Optional<Order> optionalOrder = orderRepository.findById(orderId);
+    if (optionalOrder.isEmpty()) {
+      throw new OrderServiceException("Order not found with ID: " + orderId);
+    }
+    return optionalOrder.get();
+  }
+  public void reopenOrder(int orderId) throws OrderServiceException {
+    Optional<Order> optionalOrder = orderRepository.findById(orderId);
+    if (optionalOrder.isEmpty()) {
+      throw new OrderServiceException("Order not found with ID: " + orderId);
+    }
+
+    Order order = optionalOrder.get();
+
     if (!order.isClosed()) {
       throw new OrderServiceException("Order is not closed. Cannot reopen.");
     }
@@ -213,38 +215,17 @@ public class OrderService {
     orderRepository.save(order);
   }
 
-  public BigDecimal calculateApproximatePrice(Order order) {
-    OrderCalculator calculator = new OrderCalculator();
-    return calculator.calculateApproximatePrice(order);
-  }
+  private void updateOrderAmounts(Order order) {
+    BigDecimal totalAmount = BigDecimal.ZERO;
 
-  private class OrderCalculator {
-
-    public void calculateOrderAmounts(Order order) {
-      BigDecimal totalAmount = BigDecimal.ZERO;
-
-      for (OrderItem orderItem : order.getOrderItems()) {
-        BigDecimal productPrice = orderItem.getProduct().getPrice();
-        int quantity = orderItem.getQuantity();
-        BigDecimal amount = productPrice != null ? productPrice.multiply(BigDecimal.valueOf(quantity)) : BigDecimal.ZERO;
-        orderItem.setAmount(amount);
-        totalAmount = totalAmount.add(amount);
-      }
-
-      order.setTotalAmount(totalAmount);
+    for (OrderItem orderItem : order.getOrderItems()) {
+      BigDecimal productPrice = orderItem.getProduct().getPrice();
+      int quantity = orderItem.getQuantity();
+      BigDecimal amount = productPrice != null ? productPrice.multiply(BigDecimal.valueOf(quantity)) : BigDecimal.ZERO;
+      orderItem.setAmount(amount);
+      totalAmount = totalAmount.add(amount);
     }
 
-    public BigDecimal calculateApproximatePrice(Order order) {
-      BigDecimal totalPrice = BigDecimal.ZERO;
-
-      for (OrderItem orderItem : order.getOrderItems()) {
-        BigDecimal productPrice = orderItem.getProduct().getPrice();
-        int quantity = orderItem.getQuantity();
-        BigDecimal itemPrice = productPrice != null ? productPrice.multiply(BigDecimal.valueOf(quantity)) : BigDecimal.ZERO;
-        totalPrice = totalPrice.add(itemPrice);
-      }
-
-      return totalPrice;
-    }
+    order.setTotalAmount(totalAmount);
   }
 }

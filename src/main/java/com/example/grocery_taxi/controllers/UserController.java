@@ -8,7 +8,6 @@ import com.example.grocery_taxi.exception.ApiError;
 import com.example.grocery_taxi.filter.JwtAuthenticationFilter;
 import com.example.grocery_taxi.service.AuthenticationService;
 import com.example.grocery_taxi.service.UserService;
-import java.util.ArrayList;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -22,6 +21,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -41,7 +41,7 @@ public class UserController {
     this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     this.jwtUtil = jwtUtil;
   }
-  @CrossOrigin(origins = "http://localhost:63342")
+
   @PostMapping("/login")
   @ResponseStatus(HttpStatus.OK)
   public ResponseEntity<?> login(HttpServletRequest request, HttpServletResponse response,
@@ -64,8 +64,6 @@ public class UserController {
     return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
   }
 
-
-  @CrossOrigin(origins = "http://localhost:63342")
   @GetMapping("/logout")
   public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response) {
     // Remove the JWT token from cookies using JwtAuthenticationFilter
@@ -74,7 +72,6 @@ public class UserController {
     return ResponseEntity.ok("Logout successful");
   }
 
-  @CrossOrigin(origins = "http://localhost:63342")
   @PostMapping("/users")
   public ResponseEntity<?> registerUser(@Valid @RequestBody UserDto userDto, BindingResult bindingResult) {
     // Check if email already exists
@@ -104,7 +101,6 @@ public class UserController {
 
     return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
   }
-
 
   @GetMapping("/secure-resource")
   public ResponseEntity<?> secureResource() {

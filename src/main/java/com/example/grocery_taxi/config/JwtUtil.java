@@ -1,10 +1,14 @@
 package com.example.grocery_taxi.config;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import io.jsonwebtoken.*;
+
 
 import java.security.Key;
 import java.util.Base64;
@@ -32,15 +36,17 @@ public class JwtUtil {
         .compact();
   }
 
+
   public boolean validateToken(String token) {
+    Key key = Keys.hmacShaKeyFor(Base64.getDecoder().decode(secretKey));
     try {
-      Key key = Keys.hmacShaKeyFor(Base64.getDecoder().decode(secretKey));
       Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
       return true;
-    } catch (Exception e) {
+    } catch (ExpiredJwtException | UnsupportedJwtException e) {
       return false;
     }
   }
+
 
   public String extractUsernameFromToken(String token) {
     Key key = Keys.hmacShaKeyFor(Base64.getDecoder().decode(secretKey));
