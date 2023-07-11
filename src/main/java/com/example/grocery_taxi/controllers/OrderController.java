@@ -9,14 +9,15 @@ import com.example.grocery_taxi.filter.JwtAuthenticationFilter;
 import com.example.grocery_taxi.model.UserRole;
 import com.example.grocery_taxi.service.OrderItemService;
 import com.example.grocery_taxi.service.OrderService;
+import javax.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.math.BigDecimal;
+import java.util.Comparator;
 import java.util.List;
 
 @RestController
@@ -33,17 +34,48 @@ public class OrderController {
     this.orderItemService = orderItemService;
   }
 
+  @GetMapping("/open")
+  public ResponseEntity<List<Order>> getOpenOrders(HttpServletRequest request) {
+    String token = jwtAuthenticationFilter.extractTokenFromCookies(request.getCookies());
+    User authenticatedUser = jwtAuthenticationFilter.getAuthenticatedUserFromTokenInCookies(token);
+
+    if (authenticatedUser != null && authenticatedUser.getRole() == UserRole.Courier) {
+      List<Order> openOrders = orderService.getOpenOrders();
+      return ResponseEntity.ok(openOrders);
+    }
+
+    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+  }
+
+  @GetMapping("/open-with-price")
+  public ResponseEntity<List<Order>> getOpenOrdersWithPrice(HttpServletRequest request) {
+    String token = jwtAuthenticationFilter.extractTokenFromCookies(request.getCookies());
+    User authenticatedUser = jwtAuthenticationFilter.getAuthenticatedUserFromTokenInCookies(token);
+
+    if (authenticatedUser != null && authenticatedUser.getRole() == UserRole.Courier) {
+      List<Order> openOrders = orderService.getOpenOrders();
+
+      for (Order order : openOrders) {
+        BigDecimal approximatePrice = orderService.calculateApproximatePrice(order);
+        order.setApproximatePrice(approximatePrice);
+      }
+
+      // Sort the orders by price
+      openOrders.sort(Comparator.comparing(Order::getApproximatePrice));
+
+      return ResponseEntity.ok(openOrders);
+    }
+
+    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+  }
+
+
   @PostMapping
   public ResponseEntity<?> createOrder(HttpServletRequest request, HttpServletResponse response) throws OrderServiceException {
     String token = jwtAuthenticationFilter.extractTokenFromCookies(request.getCookies());
     User authenticatedUser = jwtAuthenticationFilter.getAuthenticatedUserFromTokenInCookies(token);
 
-    if (authenticatedUser != null) {
-      // Check if the user is a courier
-      if (authenticatedUser.getRole() == UserRole.Courier) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Courier users are not allowed to create orders.");
-      }
-
+    if (authenticatedUser != null && authenticatedUser.getRole() != UserRole.Courier) {
       Order order = orderService.createOrder(Math.toIntExact(authenticatedUser.getId()));
       return ResponseEntity.ok(order);
     }
@@ -57,7 +89,7 @@ public class OrderController {
     String token = jwtAuthenticationFilter.extractTokenFromCookies(httpRequest.getCookies());
     User authenticatedUser = jwtAuthenticationFilter.getAuthenticatedUserFromTokenInCookies(token);
 
-    if (authenticatedUser != null) {
+    if (authenticatedUser != null && authenticatedUser.getRole() != UserRole.Courier) {
       Order order = orderService.getOrderById(orderId);
       BigDecimal totalAmountBefore = order.getTotalAmount(); // Get the current total amount
 
@@ -83,7 +115,6 @@ public class OrderController {
 
   @PutMapping("/{orderId}/items/{itemId}")
   public ResponseEntity<String> updateOrderItemQuantity(@PathVariable int orderId, @PathVariable int itemId, @RequestBody UpdateOrderItemRequest request) throws OrderServiceException, OrderItemServiceException {
-    Order order = orderService.getOrderById(orderId);
     OrderItem orderItem = orderItemService.getOrderItemById(itemId);
     int quantity = request.getQuantity();
 
@@ -91,7 +122,6 @@ public class OrderController {
 
     return ResponseEntity.ok("Order item quantity updated successfully.");
   }
-
 
   @DeleteMapping("/{orderId}/items/{itemId}")
   public ResponseEntity<String> removeOrderItem(@PathVariable int orderId, @PathVariable int itemId) throws OrderServiceException, OrderItemServiceException {
@@ -102,7 +132,6 @@ public class OrderController {
 
     return ResponseEntity.ok("Order item removed successfully.");
   }
-
 
   @PutMapping("/{orderId}/confirm")
   public ResponseEntity<String> confirmOrder(@PathVariable int orderId) throws OrderServiceException {
@@ -124,39 +153,24 @@ public class OrderController {
     return ResponseEntity.ok("Order cancelled successfully.");
   }
 
-  @PutMapping("/{orderId}/close/consumer")
-  public ResponseEntity<String> closeOrderByConsumer(@PathVariable int orderId) {
-    try {
-      Order order = orderService.getOrderById(orderId);
-      orderService.closeOrderByConsumer(order);
-      return ResponseEntity.ok("Order closed successfully.");
-    } catch (OrderServiceException e) {
-      return ResponseEntity.badRequest().body(e.getMessage());
-    }
+  @PutMapping("/{orderId}/close/customer")
+  public ResponseEntity<String> closeOrderByConsumer(@PathVariable int orderId) throws OrderServiceException {
+    Order order = orderService.getOrderById(orderId);
+    orderService.closeOrderByConsumer(order);
+    return ResponseEntity.ok("Order closed successfully.");
   }
 
   @PutMapping("/{orderId}/close/courier")
-  public ResponseEntity<String> closeOrderByCourier(@PathVariable int orderId) {
-    try {
-      Order order = orderService.getOrderById(orderId);
-      orderService.closeOrderByCourier(order);
-      return ResponseEntity.ok("Order closed successfully.");
-    } catch (OrderServiceException e) {
-      return ResponseEntity.badRequest().body(e.getMessage());
-    }
+  public ResponseEntity<String> closeOrderByCourier(@PathVariable int orderId) throws OrderServiceException {
+    Order order = orderService.getOrderById(orderId);
+    orderService.closeOrderByCourier(order);
+    return ResponseEntity.ok("Order closed successfully.");
   }
 
   @PutMapping("/{orderId}/reopen")
-  public ResponseEntity<String> reopenOrder(@PathVariable int orderId) {
-    try {
-      Order order = orderService.getOrderById(orderId);
-      orderService.reopenOrder(order);
-      return ResponseEntity.ok("Order reopened successfully.");
-    } catch (OrderServiceException e) {
-      return ResponseEntity.badRequest().body(e.getMessage());
-    }
+  public ResponseEntity<String> reopenOrder(@PathVariable int orderId) throws OrderServiceException {
+    Order order = orderService.getOrderById(orderId);
+    orderService.reopenOrder(order);
+    return ResponseEntity.ok("Order reopened successfully.");
   }
-
-
 }
-

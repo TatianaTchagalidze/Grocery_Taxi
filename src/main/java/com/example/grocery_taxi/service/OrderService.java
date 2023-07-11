@@ -43,7 +43,6 @@ public class OrderService {
     Order order = new Order();
     order.setUser(user);
     order.setState(OrderState.DRAFT);
-    order.setTotalAmount(BigDecimal.ZERO);
     order.setEditable(true);
 
     return orderRepository.save(order);
@@ -65,6 +64,7 @@ public class OrderService {
     orderItem.setOrder(order);
     orderItem.setProduct(product);
     orderItem.setQuantity(quantity);
+    orderItem.setAmount();
 
     BigDecimal productPrice = product.getPrice();
     BigDecimal amount = productPrice != null ? productPrice.multiply(BigDecimal.valueOf(quantity)) : BigDecimal.ZERO;
@@ -72,7 +72,7 @@ public class OrderService {
 
     order.getOrderItems().add(orderItem);
 
-    updateTotalAmount(order); // Update the total amount
+    updateOrderAmounts(order);
 
     orderRepository.save(order);
   }
@@ -89,25 +89,11 @@ public class OrderService {
       throw new OrderServiceException("Requested quantity exceeds available quantity for product: " + orderItem.getProduct().getName());
     }
 
-    BigDecimal oldAmount = orderItem.getAmount();
     int oldQuantity = orderItem.getQuantity();
 
     orderItem.setQuantity(quantity);
 
-    BigDecimal productPrice = orderItem.getProduct().getPrice();
-    BigDecimal newAmount = productPrice != null ? productPrice.multiply(BigDecimal.valueOf(quantity)) : BigDecimal.ZERO;
-    orderItem.setAmount(newAmount);
-
-    BigDecimal totalAmount = order.getTotalAmount();
-    if (totalAmount != null && oldAmount != null) {
-      // Subtract the old item amount and add the new item amount to the total amount
-      totalAmount = totalAmount.subtract(oldAmount).add(newAmount);
-    } else if (totalAmount == null && oldAmount != null) {
-      totalAmount = newAmount;
-    } else {
-      totalAmount = BigDecimal.ZERO;
-    }
-    order.setTotalAmount(totalAmount);
+    updateOrderAmounts(order);
 
     // Adjust the available quantity of the product
     int quantityDifference = oldQuantity - quantity;
@@ -121,12 +107,9 @@ public class OrderService {
       throw new OrderServiceException("Invalid order item: " + orderItem.getId());
     }
 
-    BigDecimal amount = orderItem.getAmount();
-    if (amount != null) {
-      order.setTotalAmount(order.getTotalAmount().subtract(amount));
-    }
-
     order.getOrderItems().remove(orderItem);
+
+    updateOrderAmounts(order);
 
     orderRepository.save(order);
   }
@@ -140,16 +123,8 @@ public class OrderService {
       throw new OrderServiceException("Cannot confirm an order without any items.");
     }
 
-    BigDecimal totalAmount = BigDecimal.ZERO;
+    updateOrderAmounts(order);
 
-    for (OrderItem orderItem : order.getOrderItems()) {
-      BigDecimal amount = orderItem.getAmount();
-      if (amount != null) {
-        totalAmount = totalAmount.add(amount);
-      }
-    }
-
-    order.setTotalAmount(totalAmount);
     order.setState(OrderState.OPEN);
     order.setEditable(false); // Disable editing of the order
 
@@ -179,7 +154,7 @@ public class OrderService {
     Order order = getOrderById(orderId);
 
     // Check if the order is already completed
-    if (order.getState()== OrderState.COMPLETED) {
+    if (order.getState() == OrderState.COMPLETED) {
       throw new OrderServiceException("Order is already completed.");
     }
 
@@ -193,19 +168,13 @@ public class OrderService {
     orderRepository.save(order);
   }
 
-  public List<Order> getOrdersByState(OrderState orderState) {
-    return orderRepository.findByOrderState(orderState);
+  public List<Order> getOpenOrders() {
+    return orderRepository.findByOrderState(OrderState.OPEN);
   }
 
-  private void updateTotalAmount(Order order) {
-    BigDecimal totalAmount = BigDecimal.ZERO;
-    for (OrderItem orderItem : order.getOrderItems()) {
-      BigDecimal amount = orderItem.getAmount();
-      if (amount != null) {
-        totalAmount = totalAmount.add(amount);
-      }
-    }
-    order.setTotalAmount(totalAmount);
+  private void updateOrderAmounts(Order order) {
+    OrderCalculator calculator = new OrderCalculator();
+    calculator.calculateOrderAmounts(order);
   }
 
   public void closeOrderByConsumer(Order order) throws OrderServiceException {
@@ -217,6 +186,9 @@ public class OrderService {
     order.setState(OrderState.CLOSED);
 
     orderRepository.save(order);
+  }
+  public List<Order> getOrdersByState(OrderState orderState) {
+    return orderRepository.findByOrderState(orderState);
   }
 
   public void closeOrderByCourier(Order order) throws OrderServiceException {
@@ -241,5 +213,38 @@ public class OrderService {
     orderRepository.save(order);
   }
 
-}
+  public BigDecimal calculateApproximatePrice(Order order) {
+    OrderCalculator calculator = new OrderCalculator();
+    return calculator.calculateApproximatePrice(order);
+  }
 
+  private class OrderCalculator {
+
+    public void calculateOrderAmounts(Order order) {
+      BigDecimal totalAmount = BigDecimal.ZERO;
+
+      for (OrderItem orderItem : order.getOrderItems()) {
+        BigDecimal productPrice = orderItem.getProduct().getPrice();
+        int quantity = orderItem.getQuantity();
+        BigDecimal amount = productPrice != null ? productPrice.multiply(BigDecimal.valueOf(quantity)) : BigDecimal.ZERO;
+        orderItem.setAmount(amount);
+        totalAmount = totalAmount.add(amount);
+      }
+
+      order.setTotalAmount(totalAmount);
+    }
+
+    public BigDecimal calculateApproximatePrice(Order order) {
+      BigDecimal totalPrice = BigDecimal.ZERO;
+
+      for (OrderItem orderItem : order.getOrderItems()) {
+        BigDecimal productPrice = orderItem.getProduct().getPrice();
+        int quantity = orderItem.getQuantity();
+        BigDecimal itemPrice = productPrice != null ? productPrice.multiply(BigDecimal.valueOf(quantity)) : BigDecimal.ZERO;
+        totalPrice = totalPrice.add(itemPrice);
+      }
+
+      return totalPrice;
+    }
+  }
+}

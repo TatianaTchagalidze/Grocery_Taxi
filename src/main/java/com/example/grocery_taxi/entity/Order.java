@@ -2,7 +2,6 @@ package com.example.grocery_taxi.entity;
 
 import com.example.grocery_taxi.model.OrderState;
 
-
 import javax.persistence.*;
 import java.math.BigDecimal;
 import java.util.HashSet;
@@ -23,7 +22,7 @@ public class Order {
   @JoinColumn(name = "user_id")
   private User user;
 
-  @Enumerated(EnumType.STRING) // Specify that the field should be persisted as a string
+  @Enumerated(EnumType.STRING)
   @Column(name = "order_state", nullable = false, length = 20)
   private OrderState orderState;
 
@@ -35,6 +34,9 @@ public class Order {
 
   @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
   private Set<OrderItem> orderItems;
+
+  @Transient
+  private BigDecimal approximatePrice; // Added field for approximate price
 
   public Order() {
     this.orderItems = new HashSet<>();

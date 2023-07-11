@@ -29,11 +29,11 @@ public class OrderItem {
 
   private int quantity;
 
+  private BigDecimal amount;
 
-  public BigDecimal getAmount() {
-    return null;
-  }
 
-  public void setAmount(BigDecimal multiply) {
+  public void setAmount() {
+    BigDecimal productPrice = product.getPrice();
+    this.amount = productPrice != null ? productPrice.multiply(BigDecimal.valueOf(quantity)) : BigDecimal.ZERO;
   }
 }

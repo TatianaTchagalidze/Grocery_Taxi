@@ -37,6 +37,7 @@ public class User {
     @Size(min = 8)
     private String password;
 
+
     public User() {
     }
 }
