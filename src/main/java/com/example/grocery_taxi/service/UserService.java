@@ -42,8 +42,6 @@ public class UserService {
     public boolean emailExists(String email) {
 
         Optional<User> existingUser = userRepository.findByEmail(email);
-
-        // Check if an existing user with the given email was found
         return existingUser.isPresent();
     }
 }

@@ -6,6 +6,7 @@ import com.example.grocery_taxi.exception.OrderServiceException;
 import com.example.grocery_taxi.model.UserRole;
 import com.example.grocery_taxi.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@CrossOrigin(origins = "http://localhost:63342")
 @RestController
 @RequestMapping("/orders")
 public class OrderController {
@@ -24,19 +26,28 @@ public class OrderController {
     this.orderService = orderService;
   }
 
-  @PostMapping("/{userId}")
-  public ResponseEntity<Order> createOrder(@PathVariable int userId) throws OrderServiceException {
-    Order order = orderService.createOrder(userId);
-    return ResponseEntity.ok(order);
+  @PostMapping
+  public ResponseEntity<?> createOrder() throws OrderServiceException {
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    User authenticatedUser = (User) authentication.getPrincipal();
+
+    if (authenticatedUser != null && authenticatedUser.getRole() != UserRole.Courier) {
+      Order order = orderService.createOrder(Math.toIntExact(authenticatedUser.getId()));
+      return ResponseEntity.ok(order);
+    }
+
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
   }
 
   @PostMapping("/{orderId}/items")
-  public ResponseEntity<String> addOrderItems(@PathVariable int orderId, @RequestBody List<AddOrderItemRequest> requestList) throws OrderServiceException {
+  public ResponseEntity<String> addOrderItems(@PathVariable int orderId, @RequestBody List<AddOrderItemRequest> requestList, Authentication authentication) throws OrderServiceException {
+    User authenticatedUser = (User) authentication.getPrincipal();
     for (AddOrderItemRequest request : requestList) {
       orderService.addOrderItem(orderId, request.getProductId(), request.getQuantity());
     }
     return ResponseEntity.ok("Order items added successfully.");
   }
+
 
   @DeleteMapping("/{orderId}/items/{itemId}")
   public ResponseEntity<String> removeOrderItem(@PathVariable int orderId, @PathVariable int itemId) throws OrderServiceException {

@@ -7,6 +7,8 @@ import com.example.grocery_taxi.service.CourierService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,7 +25,7 @@ public class CourierController {
   }
 
   @GetMapping("/orders/open")
-  @PreAuthorize("hasRole('ROLE_COURIER')")
+
   public ResponseEntity<List<Order>> getOpenOrders() {
     List<Order> openOrders = courierService.getOpenOrders();
     return ResponseEntity.ok(openOrders);
@@ -35,4 +37,3 @@ public class CourierController {
     return ResponseEntity.ok("Order picked up successfully.");
   }
 }
-

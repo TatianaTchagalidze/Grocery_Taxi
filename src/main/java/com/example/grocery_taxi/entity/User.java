@@ -13,6 +13,8 @@ import net.minidev.json.annotate.JsonIgnore;
 @Data
 @AllArgsConstructor
 @Builder
+@Getter
+@Setter
 @Table(name = "users")
 public class User {
     @Id

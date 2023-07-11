@@ -210,7 +210,7 @@ public class OrderService {
     }
 
     order.setClosed(false);
-    order.setState(OrderState.OPEN);
+//    order.setState(OrderState.OPEN);
 
     orderRepository.save(order);
   }
