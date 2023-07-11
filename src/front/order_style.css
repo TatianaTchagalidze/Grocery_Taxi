@@ -21,7 +21,7 @@ h1 {
 
 #search-button {
     padding: 10px 20px;
-    background-color: #007bff;
+    background-color: #079b89; /* Light purple */
     color: #fff;
     border: none;
     cursor: pointer;
@@ -63,7 +63,7 @@ h1 {
 
 .product button {
     padding: 10px 20px;
-    background-color: #007bff;
+    background-color: #036256; /* Light purple */
     color: #fff;
     border: none;
     cursor: pointer;
@@ -87,8 +87,9 @@ h1 {
 #checkout-button {
     display: block;
     padding: 10px 20px;
-    background-color: #007bff;
+    background-color: #036256; /* Light purple */
     color: #fff;
     border: none;
     cursor: pointer;
 }
+

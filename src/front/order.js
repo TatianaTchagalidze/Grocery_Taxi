@@ -12,7 +12,6 @@ fetch('http://localhost:8080/products')
     console.error('Error fetching product data:', error);
   });
 
-// Create a product element with image, name, description, and quantity selection
 function createProductElement(product) {
   const productElement = document.createElement('div');
   productElement.classList.add('product');
@@ -22,10 +21,13 @@ function createProductElement(product) {
   imageElement.alt = product.name; // Set the product name as the alt text
   productElement.appendChild(imageElement);
 
-
   const nameElement = document.createElement('h3');
   nameElement.textContent = product.name;
   productElement.appendChild(nameElement);
+
+  const priceElement = document.createElement('p');
+  priceElement.textContent = `Price: $${product.price}`;
+  productElement.appendChild(priceElement);
 
   const descriptionElement = document.createElement('p');
   descriptionElement.textContent = product.description;
@@ -55,8 +57,21 @@ searchButton.addEventListener('click', searchProducts);
 
 function searchProducts() {
   const searchQuery = searchInput.value.toLowerCase();
-  // Perform search logic and update the displayed products accordingly
+  const productElements = document.getElementsByClassName('product');
+
+  // Iterate through each product element and check if it matches the search query
+  for (const productElement of productElements) {
+    const productName = productElement.querySelector('h3').textContent.toLowerCase();
+    const productDescription = productElement.querySelector('p').textContent.toLowerCase();
+
+    if (productName.includes(searchQuery) || productDescription.includes(searchQuery)) {
+      productElement.style.display = 'block';
+    } else {
+      productElement.style.display = 'none';
+    }
+  }
 }
+
 
 // Cart functionality
 const cartItems = document.getElementById('cart-items');
@@ -75,18 +90,17 @@ function addToCart(product, quantity) {
 }
 
 function updateCartDisplay() {
-  cartItems.innerHTML = ''; // Clear previous cart items
+  cartItems.innerHTML = '';
 
-  cart.forEach(cartitem => {
+  cart.forEach(cartItem => {
     const cartItemElement = document.createElement('li');
     cartItemElement.textContent = `${cartItem.product.name} - Quantity: ${cartItem.quantity}`;
     cartItems.appendChild(cartItemElement);
   });
 }
 
+
 function checkoutCart() {
-  // Process the cart items and proceed with the order
 }
 
-// You can add additional functions and logic as needed
 
