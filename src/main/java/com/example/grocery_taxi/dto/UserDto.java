@@ -29,4 +29,5 @@ public class UserDto {
   @NotBlank(message = "Password confirmation is required")
   @Size(min = 8, message = "Password confirmation must be at least 8 characters long")
   private String passwordConfirmation;
+
 }

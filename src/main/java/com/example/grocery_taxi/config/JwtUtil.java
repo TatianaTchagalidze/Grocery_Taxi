@@ -1,75 +1,57 @@
 package com.example.grocery_taxi.config;
 
-
-import io.jsonwebtoken.JwsHeader;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.Keys;
-import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import io.jsonwebtoken.*;
 
-import javax.crypto.SecretKey;
-import java.security.SecureRandom;
+
+import java.security.Key;
 import java.util.Base64;
 import java.util.Date;
-import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @Component
 public class JwtUtil {
 
-  private Map<String, String> secretKeyMap = new ConcurrentHashMap<>(); // Map to store secret keys for each user
+  private String secretKey;
 
   @Value("${jwt.expiration-time}")
   private long expirationTime;
 
-  public String generateToken(String username) {
-    String secretKey = getOrCreateSecretKey(username); // Get or create a secret key for the user
+  public JwtUtil(@Value("${jwt.secret-key}") String secretKey) {
+    this.secretKey = secretKey;
+  }
 
-    // Build JWT token
+  public String generateToken(String username) {
+    Key key = Keys.hmacShaKeyFor(Base64.getDecoder().decode(secretKey));
     return Jwts.builder()
-        .setHeaderParam(JwsHeader.TYPE, JwsHeader.JWT_TYPE)
         .setSubject(username)
-        .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
-        .signWith(Keys.hmacShaKeyFor(secretKey.getBytes()), SignatureAlgorithm.HS256)
+        .setExpiration(new Date(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(expirationTime)))
+        .signWith(key)
         .compact();
   }
 
+
   public boolean validateToken(String token) {
+    Key key = Keys.hmacShaKeyFor(Base64.getDecoder().decode(secretKey));
     try {
-      String username = extractUsernameFromToken(token);
-      String secretKey = secretKeyMap.get(username); // Retrieve the secret key for the user
-
-      if (secretKey != null) {
-        Jwts.parserBuilder()
-            .setSigningKey(Keys.hmacShaKeyFor(secretKey.getBytes()))
-            .build()
-            .parseClaimsJws(token);
-        return true;
-      }
-    } catch (Exception e) {
-      // Token validation failed
+      Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
+      return true;
+    } catch (ExpiredJwtException | UnsupportedJwtException e) {
+      return false;
     }
-    return false;
   }
 
-  private String extractUsernameFromToken(String token) {
-    return Jwts.parserBuilder()
-        .build()
-        .parseClaimsJws(token)
-        .getBody()
-        .getSubject();
+
+  public String extractUsernameFromToken(String token) {
+    Key key = Keys.hmacShaKeyFor(Base64.getDecoder().decode(secretKey));
+    Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+    return claims.getSubject();
   }
 
-  private String getOrCreateSecretKey(String username) {
-    return secretKeyMap.computeIfAbsent(username, key -> generateNewSecretKey());
-  }
-
-  private String generateNewSecretKey() {
-    // Generate a new secret key
-    byte[] keyBytes = new byte[64];
-    new SecureRandom().nextBytes(keyBytes);
-    return Base64.getEncoder().encodeToString(keyBytes);
-  }
 }
-

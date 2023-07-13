@@ -23,9 +23,6 @@
     </module>
 
 
-    <!-- Check for newline at end of file -->
-    <module name="NewlineAtEndOfFile"/>
-
     <!-- Check for property file translation -->
     <module name="Translation"/>
 

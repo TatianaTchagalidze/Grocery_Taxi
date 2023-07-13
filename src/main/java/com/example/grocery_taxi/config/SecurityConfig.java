@@ -1,9 +1,11 @@
 package com.example.grocery_taxi.config;
 
 import com.example.grocery_taxi.filter.JwtAuthenticationFilter;
+import com.example.grocery_taxi.repository.UserRepository;
 import com.example.grocery_taxi.security.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -22,11 +24,13 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
   private final CustomUserDetailsService userDetailsService;
   private final JwtAuthenticationEntryPoint authenticationEntryPoint;
   private final JwtUtil jwtUtil;
+  private final UserRepository userRepository;
 
-  public SecurityConfig(CustomUserDetailsService userDetailsService, JwtAuthenticationEntryPoint authenticationEntryPoint, JwtUtil jwtUtil) {
+  public SecurityConfig(CustomUserDetailsService userDetailsService, JwtAuthenticationEntryPoint authenticationEntryPoint, JwtUtil jwtUtil, UserRepository userRepository) {
     this.userDetailsService = userDetailsService;
     this.authenticationEntryPoint = authenticationEntryPoint;
     this.jwtUtil = jwtUtil;
+    this.userRepository = userRepository;
   }
 
   @Override
@@ -36,23 +40,23 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         .antMatchers("/users").permitAll()
         .antMatchers("/health").permitAll()
         .antMatchers("/login").permitAll()
-        .anyRequest().authenticated()
+        .antMatchers(HttpMethod.POST, "/orders").authenticated()
+        .antMatchers(HttpMethod.PUT, "/orders/**").authenticated()
+        .antMatchers(HttpMethod.DELETE, "/orders/**").authenticated()
+        .anyRequest().permitAll()
         .and()
         .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
         .and()
         .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
   }
 
-
   @Override
   protected void configure(AuthenticationManagerBuilder auth) throws Exception {
     auth.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder());
   }
 
-  @Bean
   public JwtAuthenticationFilter jwtAuthenticationFilter() throws Exception {
-    JwtAuthenticationFilter filter = new JwtAuthenticationFilter(authenticationManager(), jwtUtil);
-    return filter;
+    return new JwtAuthenticationFilter(authenticationManager(), jwtUtil, userRepository);
   }
 
   @Bean

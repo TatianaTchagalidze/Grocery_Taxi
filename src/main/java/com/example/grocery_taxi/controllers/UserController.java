@@ -1,5 +1,6 @@
 package com.example.grocery_taxi.controllers;
 
+import com.example.grocery_taxi.config.JwtUtil;
 import com.example.grocery_taxi.dto.LoginRequestDto;
 import com.example.grocery_taxi.dto.UserDto;
 import com.example.grocery_taxi.entity.User;
@@ -20,6 +21,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -30,12 +32,16 @@ public class UserController {
   private final AuthenticationService authenticationService;
   private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
+  private final JwtUtil jwtUtil;
+
   public UserController(UserService userService, AuthenticationService authenticationService,
-                        JwtAuthenticationFilter jwtAuthenticationFilter) {
+                        JwtAuthenticationFilter jwtAuthenticationFilter, JwtUtil jwtUtil) {
     this.userService = userService;
     this.authenticationService = authenticationService;
     this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+    this.jwtUtil = jwtUtil;
   }
+
 
   @PostMapping("/login")
   @ResponseStatus(HttpStatus.OK)
@@ -49,7 +55,7 @@ public class UserController {
     boolean isAuthenticated = authenticationService.authenticateUser(loginRequestDtoForm.getEmail(),
         loginRequestDtoForm.getPassword());
     if (isAuthenticated) {
-      String token = jwtAuthenticationFilter.generateToken(loginRequestDtoForm.getPassword());
+      String token = jwtUtil.generateToken(loginRequestDtoForm.getEmail()); // Use the email as the username
       jwtAuthenticationFilter.saveTokenInCookies(request, response, token);
 
       return ResponseEntity.ok().build();
@@ -58,7 +64,6 @@ public class UserController {
     // Authentication failed
     return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
   }
-
 
   @GetMapping("/logout")
   public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response) {
@@ -70,6 +75,16 @@ public class UserController {
 
   @PostMapping("/users")
   public ResponseEntity<?> registerUser(@Valid @RequestBody UserDto userDto, BindingResult bindingResult) {
+    // Check if email already exists
+    if (userService.emailExists(userDto.getEmail())) {
+      List<String> validationErrors = new ArrayList<>();
+      validationErrors.add("Email already exists. Please use a different email.");
+
+      ApiError apiError = new ApiError(HttpStatus.BAD_REQUEST, LocalDateTime.now(), "Validation Error", validationErrors);
+
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(apiError);
+    }
+
     // Handle user registration
     if (bindingResult.hasErrors()) {
       List<String> validationErrors = bindingResult.getFieldErrors()
@@ -77,14 +92,13 @@ public class UserController {
           .map(FieldError::getDefaultMessage)
           .collect(Collectors.toList());
 
-      ApiError apiError =
-          new ApiError(HttpStatus.BAD_REQUEST, LocalDateTime.now(), "Validation Error",
-              validationErrors);
+      ApiError apiError = new ApiError(HttpStatus.BAD_REQUEST, LocalDateTime.now(), "Validation Error", validationErrors);
 
       return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(apiError);
     }
 
     User createdUser = userService.registerUser(userDto);
+    createdUser.setPassword(null);
 
     return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
   }

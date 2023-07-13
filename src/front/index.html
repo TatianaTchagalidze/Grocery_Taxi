@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://kit.fontawesome.com/64d58efce2.js" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="style.css">
+  <title>Sign in & Sign up Form</title>
+</head>
+<body>
+<div class="container">
+  <div class="forms-container">
+    <div class="signin-signup">
+      <!-- Sign in form -->
+      <form action="#" class="sign-in-form" id="login-form">
+        <h2 class="title">Sign in</h2>
+        <div class="input-field">
+          <i class="fas fa-user"></i>
+          <input type="text" placeholder="Email" id="login-email">
+        </div>
+        <div class="input-field">
+          <i class="fas fa-lock"></i>
+          <input type="password" placeholder="Password" id="login-password">
+        </div>
+        <input type="submit" value="Login" class="btn solid">
+      </form>
+      <!-- Sign up form -->
+      <form action="#" class="sign-up-form" id="registration-form">
+        <h2 class="title">Sign up</h2>
+        <div class="input-field">
+          <i class="fas fa-user"></i>
+          <input type="text" placeholder="First Name" id="first-name">
+        </div>
+        <div class="input-field">
+          <i class="fas fa-user"></i>
+          <input type="text" placeholder="Last Name" id="last-name">
+        </div>
+        <div class="input-field">
+          <i class="fas fa-envelope"></i>
+          <input type="email" placeholder="Email" id="email">
+        </div>
+        <div class="input-field">
+          <i class="fas fa-lock"></i>
+          <input type="password" placeholder="Password" id="password">
+        </div>
+        <div class="input-field">
+          <i class="fas fa-lock"></i>
+          <input type="password" placeholder="Confirm Password" id="confirm-password">
+        </div>
+        <div class="role-selection">
+          <label for="Customer">
+            <input type="radio" id="Customer" name="role" value="Customer" checked>
+            Customer
+          </label>
+          <label for="Courier">
+            <input type="radio" id="Courier" name="role" value="Courier">
+            Courier
+          </label>
+        </div>
+        <input type="submit" class="btn" value="Sign up">
+      </form>
+    </div>
+  </div>
+
+  <div class="panels-container">
+    <div class="panel left-panel">
+      <div class="content">
+        <h3>New here?</h3>
+        <p>It's never late to become a member of our community!</p>
+        <button class="btn transparent" id="sign-up-btn">Sign up</button>
+      </div>
+    </div>
+    <div class="panel right-panel">
+      <div class="content">
+        <h3>One of us?</h3>
+        <p>Log in and continue your wonderful journey with us!</p>
+        <button class="btn transparent" id="sign-in-btn">Sign in</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<script src="app.js"></script>
+</body>
+</html>
