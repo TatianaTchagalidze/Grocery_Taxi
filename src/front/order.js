@@ -1,37 +1,48 @@
-// Create an order and fetch the orderId
-fetch('http://localhost:8080/orders', {
-  method: 'POST',
-})
-  .then(response => response.json())
-  .then(data => {
-    const orderId = data.id;
-    fetchProductData(orderId);
-  })
-  .catch(error => {
-    console.error('Error creating order:', error);
-  });
+// Constants
+const searchInput = document.getElementById('search-input');
+const searchButton = document.getElementById('search-button');
+const productContainer = document.getElementById('product-container');
+const cartItems = document.getElementById('cart-items');
+const checkoutButton = document.getElementById('checkout-button');
+let orderId; // Variable to store the order ID
+
+// Event listeners
+searchButton.addEventListener('click', searchProducts);
+checkoutButton.addEventListener('click', checkoutCart);
 
 // Fetch product data and populate the product container
-fetch('http://localhost:8080/products')
-  .then(response => response.json())
-  .then(data => {
-    const productContainer = document.getElementById('product-container');
-    data.forEach(product => {
-      const productElement = createProductElement(product);
-      productContainer.appendChild(productElement);
+
+// Declare cart variable and retrieve cart from session storage
+let cart = [];
+const storedCart = sessionStorage.getItem('cart');
+if (storedCart) {
+  cart = JSON.parse(storedCart);
+}
+
+fetchProductData();
+
+
+function fetchProductData() {
+  fetch('http://localhost:8080/products')
+    .then(response => response.json())
+    .then(data => {
+      data.forEach(product => {
+        const productElement = createProductElement(product);
+        productContainer.appendChild(productElement);
+      });
+    })
+    .catch(error => {
+      console.error('Error fetching product data:', error);
     });
-  })
-  .catch(error => {
-    console.error('Error fetching product data:', error);
-  });
+}
 
 function createProductElement(product) {
   const productElement = document.createElement('div');
   productElement.classList.add('product');
 
   const imageElement = document.createElement('img');
-  imageElement.src = `images/${product.id}.png`; // Set the product image URL
-  imageElement.alt = product.name; // Set the product name as the alt text
+  imageElement.src = `images/${product.id}.png`;
+  imageElement.alt = product.name;
   productElement.appendChild(imageElement);
 
   const nameElement = document.createElement('h3');
@@ -59,20 +70,13 @@ function createProductElement(product) {
     addToCart(product, quantity);
   });
   productElement.appendChild(addToCartButton);
-
   return productElement;
 }
-
-// Search functionality
-const searchInput = document.getElementById('search-input');
-const searchButton = document.getElementById('search-button');
-searchButton.addEventListener('click', searchProducts);
 
 function searchProducts() {
   const searchQuery = searchInput.value.toLowerCase();
   const productElements = document.getElementsByClassName('product');
 
-  // Iterate through each product element and check if it matches the search query
   for (const productElement of productElements) {
     const productName = productElement.querySelector('h3').textContent.toLowerCase();
     const productDescription = productElement.querySelector('p').textContent.toLowerCase();
@@ -85,80 +89,80 @@ function searchProducts() {
   }
 }
 
-
-// Cart functionality
-const cartItems = document.getElementById('cart-items');
-const checkoutButton = document.getElementById('checkout-button');
-checkoutButton.addEventListener('click', checkoutCart);
-
-const cart = [];
-
 function addToCart(product, quantity) {
   const cartItem = {
     product: product,
     quantity: quantity
   };
   cart.push(cartItem);
-  updateCartDisplay();
-  fetchOrderItems(orderId); // Replace 'orderId' with the actual order ID
+  cartItems.appendChild(createCartItemElement(cartItem));
+  cartItems.scrollTop = cartItems.scrollHeight;
+
+  saveCartToStorage();
 }
 
-function updateCartDisplay() {
-  cartItems.innerHTML = '';
+function saveCartToStorage() {
+  sessionStorage.setItem('cart', JSON.stringify(cart));
+}
 
-  cart.forEach(cartItem => {
-    const cartItemElement = document.createElement('li');
-    cartItemElement.textContent = `${cartItem.product.name} - Quantity: ${cartItem.quantity}`;
-    cartItems.appendChild(cartItemElement);
-  });
+function createCartItemElement(cartItem) {
+  const cartItemElement = document.createElement('li');
+  cartItemElement.textContent = `${cartItem.product.name} - Quantity: ${cartItem.quantity}`;
+  return cartItemElement;
 }
 
 function checkoutCart() {
-  localStorage.setItem('cartItems', JSON.stringify(cart));
-  window.location.href = 'cart.html'; // Replace 'cart.html' with the actual cart page URL
-}
+  const cartItemElements = cartItems.getElementsByTagName('li');
+  const orderItems = Array.from(cartItemElements).map(cartItemElement => {
+    const productName = cartItemElement.textContent.split(' - ')[0];
+    const quantity = parseInt(cartItemElement.textContent.split(' - ')[1].replace('Quantity: ', ''), 10);
+    const product = getProductByName(productName);
+    return {
+      productId: product.id,
+      quantity: quantity
+    };
+  });
 
-// Retrieve the cart items from the local storage
-const cartItemsFromStorage = JSON.parse(localStorage.getItem('cartItems'));
-
-if (cartItemsFromStorage) {
-  cart.push(...cartItemsFromStorage);
-  updateCartDisplay();
-}
-
-// Fetch order items and populate the cart on page load
-function fetchOrderItems(orderId) {
-  fetch(`http://localhost:8080/orders/${orderId}/items`)
-    .then(response => response.json())
+  createOrder(orderItems)
     .then(data => {
-      cart.push(...data);
-      updateCartDisplay();
+      orderId = data.id;
+      console.log('Order created:', data);
+      window.location.href = `cart.html`;
     })
     .catch(error => {
-      console.error('Error fetching order items:', error);
+      console.error('Error creating order:', error);
     });
 }
 
-// Add order item to the order
-function addOrderItemToOrder(orderId, productId, quantity) {
-  fetch(`http://localhost:8080/orders/${orderId}/items`, {
+function createOrder(orderItems) {
+  return fetch('http://localhost:8080/orders', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      productId: productId,
-      quantity: quantity
-    })
+    body: JSON.stringify(orderItems),
+    credentials: 'include'
   })
-    .then(response => {
-      if (response.ok) {
-        console.log('Order item added successfully.');
-      } else {
-        console.error('Error adding order item:', response.statusText);
-      }
+    .then(response => response.json())
+    .then(data => {
+      return data;
     })
     .catch(error => {
-      console.error('Error adding order item:', error);
+      console.error('Error creating order:', error);
     });
+}
+
+function getProductByName(name) {
+  const productElements = document.getElementsByClassName('product');
+  for (const productElement of productElements) {
+    const productName = productElement.querySelector('h3').textContent;
+    if (productName === name) {
+      const productId = productElement.querySelector('img').src.split('/').pop().split('.').shift();
+      return {
+        id: parseInt(productId, 10),
+        name: productName
+      };
+    }
+  }
+  return null;
 }

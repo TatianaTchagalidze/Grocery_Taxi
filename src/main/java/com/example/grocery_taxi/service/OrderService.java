@@ -1,5 +1,6 @@
 package com.example.grocery_taxi.service;
 
+import com.example.grocery_taxi.dto.OrderDTO;
 import com.example.grocery_taxi.entity.Order;
 import com.example.grocery_taxi.entity.OrderItem;
 import com.example.grocery_taxi.entity.Product;
@@ -33,7 +34,7 @@ public class OrderService {
     this.userRepository = userRepository;
   }
 
-  public Order createOrder(int userId) throws OrderServiceException {
+  public OrderDTO createOrder(int userId) throws OrderServiceException {
     Optional<User> optionalUser = userRepository.findById(userId);
     if (optionalUser.isEmpty()) {
       throw new OrderServiceException("User not found with ID: " + userId);
@@ -51,7 +52,9 @@ public class OrderService {
     order.setEditable(true);
     order.setTotalAmount(BigDecimal.ZERO);
 
-    return orderRepository.save(order);
+    order = orderRepository.save(order);
+
+    return new OrderDTO(order);
   }
 
 
@@ -89,6 +92,44 @@ public class OrderService {
 
     orderRepository.save(order);
   }
+
+  public void updateOrderItemQuantity(int orderId, int itemId, int newQuantity) throws OrderServiceException {
+    Order order = getOrderById(orderId);
+
+    Optional<OrderItem> optionalOrderItem = order.getOrderItems().stream()
+        .filter(orderItem -> orderItem.getId() == itemId)
+        .findFirst();
+
+    if (optionalOrderItem.isEmpty()) {
+      throw new OrderServiceException("Invalid order item: " + itemId);
+    }
+
+    OrderItem orderItem = optionalOrderItem.get();
+
+    // Get the product associated with the order item
+    Product product = orderItem.getProduct();
+
+    // Check if the new quantity exceeds the available quantity
+    int availableQuantity = product.getAvailableQuantity();
+    if (newQuantity > availableQuantity) {
+      throw new OrderServiceException("Requested quantity exceeds available quantity for product: " + product.getName());
+    }
+
+    // Calculate the updated amount based on the new quantity
+    BigDecimal productPrice = product.getPrice();
+    BigDecimal newAmount = productPrice != null ? productPrice.multiply(BigDecimal.valueOf(newQuantity)) : BigDecimal.ZERO;
+
+    // Update the order item quantity and amount
+    orderItem.setQuantity(newQuantity);
+    orderItem.setAmount(newAmount);
+
+    // Update the total order amount
+    updateOrderAmounts(order);
+
+    // Save the changes to the order
+    orderRepository.save(order);
+  }
+
 
   public void removeOrderItem(int orderId, int itemId) throws OrderServiceException {
     Optional<Order> optionalOrder = orderRepository.findById(orderId);
@@ -226,5 +267,25 @@ public class OrderService {
     }
 
     order.setTotalAmount(totalAmount);
+  }
+
+
+  public List<OrderDTO> getClosedOrdersForCustomer(int userId) throws OrderServiceException {
+    Optional<User> optionalUser = userRepository.findById(userId);
+    if (optionalUser.isEmpty()) {
+      throw new OrderServiceException("User not found with ID: " + userId);
+    }
+
+    User customer = optionalUser.get();
+
+    List<Order> allOrders = orderRepository.findAll(); // Retrieve all orders
+    List<Order> closedOrders = allOrders.stream()
+        .filter(order -> order.getUser().equals(customer)) // Filter orders for the specific customer
+        .filter(order -> order.getState() == OrderState.CLOSED) // Filter closed orders
+        .toList();
+
+    return closedOrders.stream()
+        .map(OrderDTO::new)
+        .toList();
   }
 }

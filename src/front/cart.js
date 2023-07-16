@@ -1,4 +1,4 @@
-const cartItemsFromStorage = JSON.parse(localStorage.getItem('cartItems'));
+const cartItemsFromStorage = JSON.parse(sessionStorage.getItem('cart'));
 
 const cartItemsList = document.getElementById('cart-items');
 const totalPriceElement = document.createElement('p');
@@ -64,14 +64,14 @@ function renderCartItems(cartItems) {
     totalPriceElement.textContent = `Total Price: $${totalPrice.toFixed(2)}`;
     cartItemsList.appendChild(totalPriceElement);
 
-    const continueButton = document.createElement('button');
-    continueButton.textContent = 'Continue to Pay';
-    continueButton.addEventListener('click', continueToPay);
-    cartItemsList.appendChild(continueButton);
+    const confirmOrderButton = document.createElement('button');
+    confirmOrderButton.textContent = 'Confirm Order';
+    confirmOrderButton.addEventListener('click', handleConfirmOrder);
+    cartItemsList.appendChild(confirmOrderButton);
 
     const modifyButton = document.createElement('button');
     modifyButton.textContent = 'Modify Order';
-    modifyButton.addEventListener('click', modifyOrder);
+    modifyButton.addEventListener('click', handleModifyOrder);
     cartItemsList.appendChild(modifyButton);
   } else {
     const emptyText = document.createElement('p');
@@ -82,21 +82,49 @@ function renderCartItems(cartItems) {
 
 // Function to update the quantity of a cart item
 function updateCartItemQuantity(item, quantity) {
-  item.quantity = quantity;
-  updateCartDisplay();
+  const orderId = item.orderId;
+  const itemId = item.itemId;
+  const requestBody = {
+    quantity: quantity
+  };
+
+  fetch(`http://localhost:8080/orders/${orderId}/items/${itemId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(requestBody),
+    credentials: 'include'
+  })
+      .then(response => {
+        if (response.ok) {
+          return response.json();
+        } else {
+          throw new Error('Failed to update item quantity.');
+        }
+      })
+      .then(data => {
+        // Item quantity updated successfully
+        item.quantity = quantity;
+        updateCartDisplay();
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to update item quantity. Please try again.');
+      });
 }
 
 // Function to update the cart display
 function updateCartDisplay() {
-  renderCartItems(cart);
+  renderCartItems(cartItemsFromStorage);
 }
 
 // Function to handle continuing to pay
-function continueToPay() {
-  alert('You will be redirected to the payment page.');
+function handleConfirmOrder() {
+  alert('You will be redirected to track your order.');
 }
 
-// Function to handle modifying the order
-function modifyOrder() {
-  alert('You will be redirected to the order modification page.');
+function handleModifyOrder() {
+  // Redirect to orders.html
+  window.location.href = 'orders.html';
 }

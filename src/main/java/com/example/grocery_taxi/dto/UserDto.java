@@ -1,5 +1,6 @@
 package com.example.grocery_taxi.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -29,5 +30,12 @@ public class UserDto {
   @NotBlank(message = "Password confirmation is required")
   @Size(min = 8, message = "Password confirmation must be at least 8 characters long")
   private String passwordConfirmation;
+
+  @NotBlank
+  private String address;
+
+  @NotBlank
+  private String phone_number;
+
 
 }

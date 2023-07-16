@@ -1,10 +1,12 @@
 package com.example.grocery_taxi.controllers;
 
+import com.example.grocery_taxi.dto.OrderDTO;
 import com.example.grocery_taxi.entity.Order;
 import com.example.grocery_taxi.entity.User;
 import com.example.grocery_taxi.exception.OrderServiceException;
 import com.example.grocery_taxi.model.UserRole;
 import com.example.grocery_taxi.service.OrderService;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@CrossOrigin(origins = "http://localhost:63342")
 @RestController
 @RequestMapping("/orders")
 public class OrderController {
@@ -27,29 +28,41 @@ public class OrderController {
   }
 
   @PostMapping
-  public ResponseEntity<?> createOrder() throws OrderServiceException {
+  public ResponseEntity<?> createOrder(@RequestBody List<AddOrderItemRequest> requestList) throws OrderServiceException {
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     User authenticatedUser = (User) authentication.getPrincipal();
 
     if (authenticatedUser != null && authenticatedUser.getRole() != UserRole.Courier) {
-      Order order = orderService.createOrder(Math.toIntExact(authenticatedUser.getId()));
+      OrderDTO order = orderService.createOrder(Math.toIntExact(authenticatedUser.getId()));
+
+      for (AddOrderItemRequest request : requestList) {
+        orderService.addOrderItem(order.getId(), request.getProductId(), request.getQuantity());
+      }
+
       return ResponseEntity.ok(order);
     }
 
     return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
   }
 
-  @PostMapping("/{orderId}/items")
-  public ResponseEntity<String> addOrderItems(@PathVariable int orderId, @RequestBody List<AddOrderItemRequest> requestList, Authentication authentication) throws OrderServiceException {
-    User authenticatedUser = (User) authentication.getPrincipal();
-    for (AddOrderItemRequest request : requestList) {
-      orderService.addOrderItem(orderId, request.getProductId(), request.getQuantity());
+  @PutMapping("/{orderId}/items/{itemId}")
+  public ResponseEntity<String> updateOrderItemQuantity(
+      @PathVariable int orderId,
+      @PathVariable int itemId,
+      @RequestBody Map<String, Integer> requestBody
+  ) {
+    int quantity = requestBody.get("quantity");
+
+    try {
+      orderService.updateOrderItemQuantity(orderId, itemId, quantity);
+      return ResponseEntity.ok("Order item quantity updated successfully.");
+    } catch (OrderServiceException e) {
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
     }
-    return ResponseEntity.ok("Order items added successfully.");
   }
 
 
-  @DeleteMapping("/{orderId}/items/{itemId}")
+@DeleteMapping("/{orderId}/items/{itemId}")
   public ResponseEntity<String> removeOrderItem(@PathVariable int orderId, @PathVariable int itemId) throws OrderServiceException {
     orderService.removeOrderItem(orderId, itemId);
     return ResponseEntity.ok("Order item removed successfully.");
@@ -67,7 +80,9 @@ public class OrderController {
     return ResponseEntity.ok("Order cancelled successfully.");
   }
 
-  @PutMapping("/{orderId}/close")
+  @PutMapping("/{orderId" +
+      "" +
+      "}/close")
   public ResponseEntity<String> closeOrder(@PathVariable int orderId) throws OrderServiceException {
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     User authenticatedUser = (User) authentication.getPrincipal();
@@ -76,11 +91,14 @@ public class OrderController {
   }
 
 
-
-
   @PutMapping("/{orderId}/reopen")
   public ResponseEntity<String> reopenOrder(@PathVariable int orderId) throws OrderServiceException {
     orderService.reopenOrder(orderId);
     return ResponseEntity.ok("Order reopened successfully.");
+  }
+
+  @GetMapping("/closed/{userId}")
+  public List<OrderDTO> getClosedOrdersForCustomer(@PathVariable int userId) throws OrderServiceException {
+    return orderService.getClosedOrdersForCustomer(userId);
   }
 }

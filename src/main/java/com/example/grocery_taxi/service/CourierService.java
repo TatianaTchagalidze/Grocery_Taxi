@@ -1,12 +1,15 @@
 // CourierService.java
 package com.example.grocery_taxi.service;
 
+import com.example.grocery_taxi.dto.OrderDTO;
 import com.example.grocery_taxi.entity.Order;
 import com.example.grocery_taxi.exception.OrderServiceException;
 import com.example.grocery_taxi.model.OrderState;
 import com.example.grocery_taxi.repository.OrderRepository;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -22,11 +25,13 @@ public class CourierService {
     this.orderRepository = orderRepository;
   }
 
-  public List<Order> getOpenOrders() {
-    return orderRepository.findByOrderState(OrderState.OPEN);
-
+  @PreAuthorize("hasRole('Courier')")
+  public List<OrderDTO> getOpenOrders() {
+    List<Order> openOrders = orderRepository.findByOrderState(OrderState.OPEN);
+    List<OrderDTO> openOrderDTOs = openOrders.stream().map(OrderDTO::new).collect(Collectors.toList());
+    return openOrderDTOs;
   }
-
+  @PreAuthorize("hasRole('Courier')")
   public void pickUpOrder(int orderId) throws OrderServiceException {
     Order order = getOrderById(orderId);
 
@@ -34,9 +39,10 @@ public class CourierService {
       throw new OrderServiceException("Order is already picked up by another courier.");
     }
 
-    if (order.getState() != OrderState.CONFIRMED) {
+    if (order.getState() != OrderState.OPEN) {
       throw new OrderServiceException("Order is not available for pickup.");
     }
+
 
     order.setState(OrderState.IN_PROGRESS);
     orderRepository.save(order);

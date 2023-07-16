@@ -28,6 +28,8 @@ function registerUser(event) {
   const password = document.getElementById('password').value;
   const confirmPassword = document.getElementById('confirm-password').value;
   const role = document.querySelector('input[name="role"]:checked').value;
+  const address = document.getElementById('address').value;
+  const phoneNumber = document.getElementById('phone-number').value;
 
   const user = {
     firstName: firstName,
@@ -35,7 +37,9 @@ function registerUser(event) {
     email: email,
     password: password,
     passwordConfirmation: confirmPassword,
-    role: role
+    role: role,
+    address: address,
+    phone_number: phoneNumber
   };
 
 fetch('http://localhost:8080/users', {
@@ -84,6 +88,7 @@ function loginUser(event) {
     headers: {
       'Content-Type': 'application/json'
     },
+    credentials: "include",
     body: JSON.stringify(credentials)
   })
     .then(response => {
@@ -91,7 +96,7 @@ function loginUser(event) {
         // Empty response, login success
         console.log('Login success');
         // Redirect to orders page
-        window.location.href = 'orders.html';
+        window.location.assign("orders.html");
         return;
       }
       if (!response.ok) {

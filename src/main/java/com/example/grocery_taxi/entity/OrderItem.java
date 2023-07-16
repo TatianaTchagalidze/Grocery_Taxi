@@ -1,5 +1,6 @@
 package com.example.grocery_taxi.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.math.BigDecimal;
 
 import lombok.Getter;
@@ -21,13 +22,16 @@ public class OrderItem {
 
   @ManyToOne
   @JoinColumn(name = "order_id")
+  @JsonIgnoreProperties("orderItems")
   private Order order;
 
   @ManyToOne
   @JoinColumn(name = "product_id")
   private Product product;
 
+
   private int quantity;
+
 
   private BigDecimal amount;
 

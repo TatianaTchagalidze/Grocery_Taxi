@@ -2,6 +2,7 @@ package com.example.grocery_taxi.controllers;
 
 import com.example.grocery_taxi.config.JwtUtil;
 import com.example.grocery_taxi.dto.LoginRequestDto;
+import com.example.grocery_taxi.dto.RegistrationResponseDto;
 import com.example.grocery_taxi.dto.UserDto;
 import com.example.grocery_taxi.entity.User;
 import com.example.grocery_taxi.exception.ApiError;
@@ -25,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+
 @RestController
 public class UserController {
 
@@ -41,7 +43,6 @@ public class UserController {
     this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     this.jwtUtil = jwtUtil;
   }
-
 
   @PostMapping("/login")
   @ResponseStatus(HttpStatus.OK)
@@ -97,12 +98,11 @@ public class UserController {
       return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(apiError);
     }
 
-    User createdUser = userService.registerUser(userDto);
-    createdUser.setPassword(null);
+    RegistrationResponseDto createdUser = userService.registerUser(userDto);
 
     return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
   }
-
+  
   @GetMapping("/secure-resource")
   public ResponseEntity<?> secureResource() {
     // Access secure resource
