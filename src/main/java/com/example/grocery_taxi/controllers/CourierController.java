@@ -2,7 +2,6 @@
 package com.example.grocery_taxi.controllers;
 
 import com.example.grocery_taxi.dto.OrderDTO;
-import com.example.grocery_taxi.entity.Order;
 import com.example.grocery_taxi.exception.OrderServiceException;
 import com.example.grocery_taxi.service.CourierService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,8 +29,9 @@ public class CourierController {
   }
 
   @PostMapping("/orders/{orderId}/pickup")
-  public ResponseEntity<String> pickUpOrder(@PathVariable int orderId) throws OrderServiceException {
-    courierService.pickUpOrder(orderId);
-    return ResponseEntity.ok("Order picked up successfully.");
+  public ResponseEntity<Integer> pickUpOrder(@PathVariable int orderId) throws OrderServiceException {
+    int pickedOrderId = courierService.pickUpOrder(orderId);
+    return ResponseEntity.ok(pickedOrderId );
   }
+
 }

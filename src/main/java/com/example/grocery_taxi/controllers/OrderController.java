@@ -1,7 +1,7 @@
 package com.example.grocery_taxi.controllers;
 
+import com.example.grocery_taxi.dto.ClosedOrderDTO;
 import com.example.grocery_taxi.dto.OrderDTO;
-import com.example.grocery_taxi.entity.Order;
 import com.example.grocery_taxi.entity.User;
 import com.example.grocery_taxi.exception.OrderServiceException;
 import com.example.grocery_taxi.model.UserRole;
@@ -33,17 +33,21 @@ public class OrderController {
     User authenticatedUser = (User) authentication.getPrincipal();
 
     if (authenticatedUser != null && authenticatedUser.getRole() != UserRole.Courier) {
-      OrderDTO order = orderService.createOrder(Math.toIntExact(authenticatedUser.getId()));
-
-      for (AddOrderItemRequest request : requestList) {
-        orderService.addOrderItem(order.getId(), request.getProductId(), request.getQuantity());
-      }
+      OrderDTO order = orderService.createOrder(Math.toIntExact(authenticatedUser.getId()), requestList);
 
       return ResponseEntity.ok(order);
     }
 
     return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
   }
+
+
+  @GetMapping("/{orderId}/items")
+  public ResponseEntity<List<Integer>> getOrderItemIds(@PathVariable int orderId) {
+    List<Integer> itemIds = orderService.getOrderItemIds(orderId);
+    return ResponseEntity.ok(itemIds);
+  }
+
 
   @PutMapping("/{orderId}/items/{itemId}")
   public ResponseEntity<String> updateOrderItemQuantity(
@@ -98,7 +102,13 @@ public class OrderController {
   }
 
   @GetMapping("/closed/{userId}")
-  public List<OrderDTO> getClosedOrdersForCustomer(@PathVariable int userId) throws OrderServiceException {
+  public List<ClosedOrderDTO> getClosedOrdersForCustomer(@PathVariable int userId) throws OrderServiceException {
     return orderService.getClosedOrdersForCustomer(userId);
+  }
+
+  @GetMapping("/in_progress/{orderId}")
+  public ResponseEntity<OrderDTO> getInProgressOrderForCustomer(@PathVariable int orderId) throws OrderServiceException {
+    OrderDTO orderDTO = orderService.getInProgressOrderForCustomer(orderId);
+    return ResponseEntity.ok(orderDTO);
   }
 }

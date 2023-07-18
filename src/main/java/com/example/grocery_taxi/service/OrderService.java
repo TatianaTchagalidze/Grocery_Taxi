@@ -1,6 +1,10 @@
 package com.example.grocery_taxi.service;
 
+import com.example.grocery_taxi.controllers.AddOrderItemRequest;
+import com.example.grocery_taxi.dto.ClosedOrderDTO;
 import com.example.grocery_taxi.dto.OrderDTO;
+import com.example.grocery_taxi.dto.OrderItemDTO;
+import com.example.grocery_taxi.dto.RegistrationResponseDto;
 import com.example.grocery_taxi.entity.Order;
 import com.example.grocery_taxi.entity.OrderItem;
 import com.example.grocery_taxi.entity.Product;
@@ -8,9 +12,14 @@ import com.example.grocery_taxi.entity.User;
 import com.example.grocery_taxi.exception.OrderServiceException;
 import com.example.grocery_taxi.model.OrderState;
 import com.example.grocery_taxi.model.UserRole;
+import com.example.grocery_taxi.repository.OrderItemRepository;
 import com.example.grocery_taxi.repository.OrderRepository;
 import com.example.grocery_taxi.repository.ProductRepository;
 import com.example.grocery_taxi.repository.UserRepository;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,15 +35,20 @@ public class OrderService {
   private final OrderRepository orderRepository;
   private final ProductRepository productRepository;
   private final UserRepository userRepository;
+  private final OrderItemRepository orderItemRepository;
 
   @Autowired
-  public OrderService(OrderRepository orderRepository, ProductRepository productRepository, UserRepository userRepository) {
+  public OrderService(OrderRepository orderRepository, ProductRepository productRepository,
+                      UserRepository userRepository, OrderItemRepository orderItemRepository) {
     this.orderRepository = orderRepository;
     this.productRepository = productRepository;
     this.userRepository = userRepository;
+    this.orderItemRepository = orderItemRepository;
+
   }
 
-  public OrderDTO createOrder(int userId) throws OrderServiceException {
+  public OrderDTO createOrder(int userId, List<AddOrderItemRequest> requestList)
+      throws OrderServiceException {
     Optional<User> optionalUser = userRepository.findById(userId);
     if (optionalUser.isEmpty()) {
       throw new OrderServiceException("User not found with ID: " + userId);
@@ -51,14 +65,28 @@ public class OrderService {
     order.setState(OrderState.DRAFT);
     order.setEditable(true);
     order.setTotalAmount(BigDecimal.ZERO);
-
     order = orderRepository.save(order);
 
-    return new OrderDTO(order);
+    List<OrderItemDTO> orderItemDTOs = new ArrayList<>();
+
+    for (AddOrderItemRequest request : requestList) {
+      OrderItem orderItem =
+          addOrderItem(order.getId(), request.getProductId(), request.getQuantity());
+      OrderItemDTO orderItemDTO = new OrderItemDTO(
+          orderItem.getId(),
+          orderItem.getProduct().getName(),
+          orderItem.getQuantity(),
+          orderItem.getAmount()
+      );
+      orderItemDTOs.add(orderItemDTO);
+    }
+
+    return new OrderDTO(order, orderItemDTOs);
   }
 
 
-  public void addOrderItem(int orderId, int productId, int quantity) throws OrderServiceException {
+  public OrderItem addOrderItem(int orderId, int productId, int quantity)
+      throws OrderServiceException {
     Optional<Order> optionalOrder = orderRepository.findById(orderId);
     if (optionalOrder.isEmpty()) {
       throw new OrderServiceException("Order not found with ID: " + orderId);
@@ -74,7 +102,8 @@ public class OrderService {
     Product product = optionalProduct.get();
     int availableQuantity = product.getAvailableQuantity();
     if (quantity > availableQuantity) {
-      throw new OrderServiceException("Requested quantity exceeds available quantity for product: " + product.getName());
+      throw new OrderServiceException(
+          "Requested quantity exceeds available quantity for product: " + product.getName());
     }
 
     OrderItem orderItem = new OrderItem();
@@ -83,7 +112,8 @@ public class OrderService {
     orderItem.setQuantity(quantity);
 
     BigDecimal productPrice = product.getPrice();
-    BigDecimal amount = productPrice != null ? productPrice.multiply(BigDecimal.valueOf(quantity)) : BigDecimal.ZERO;
+    BigDecimal amount = productPrice != null ? productPrice.multiply(BigDecimal.valueOf(quantity)) :
+        BigDecimal.ZERO;
     orderItem.setAmount(amount);
 
     order.getOrderItems().add(orderItem);
@@ -91,9 +121,12 @@ public class OrderService {
     updateOrderAmounts(order);
 
     orderRepository.save(order);
+
+    return orderItem;
   }
 
-  public void updateOrderItemQuantity(int orderId, int itemId, int newQuantity) throws OrderServiceException {
+  public void updateOrderItemQuantity(int orderId, int itemId, int newQuantity)
+      throws OrderServiceException {
     Order order = getOrderById(orderId);
 
     Optional<OrderItem> optionalOrderItem = order.getOrderItems().stream()
@@ -112,12 +145,15 @@ public class OrderService {
     // Check if the new quantity exceeds the available quantity
     int availableQuantity = product.getAvailableQuantity();
     if (newQuantity > availableQuantity) {
-      throw new OrderServiceException("Requested quantity exceeds available quantity for product: " + product.getName());
+      throw new OrderServiceException(
+          "Requested quantity exceeds available quantity for product: " + product.getName());
     }
 
     // Calculate the updated amount based on the new quantity
     BigDecimal productPrice = product.getPrice();
-    BigDecimal newAmount = productPrice != null ? productPrice.multiply(BigDecimal.valueOf(newQuantity)) : BigDecimal.ZERO;
+    BigDecimal newAmount =
+        productPrice != null ? productPrice.multiply(BigDecimal.valueOf(newQuantity)) :
+            BigDecimal.ZERO;
 
     // Update the order item quantity and amount
     orderItem.setQuantity(newQuantity);
@@ -238,6 +274,7 @@ public class OrderService {
     }
     return optionalOrder.get();
   }
+
   public void reopenOrder(int orderId) throws OrderServiceException {
     Optional<Order> optionalOrder = orderRepository.findById(orderId);
     if (optionalOrder.isEmpty()) {
@@ -261,7 +298,9 @@ public class OrderService {
     for (OrderItem orderItem : order.getOrderItems()) {
       BigDecimal productPrice = orderItem.getProduct().getPrice();
       int quantity = orderItem.getQuantity();
-      BigDecimal amount = productPrice != null ? productPrice.multiply(BigDecimal.valueOf(quantity)) : BigDecimal.ZERO;
+      BigDecimal amount =
+          productPrice != null ? productPrice.multiply(BigDecimal.valueOf(quantity)) :
+              BigDecimal.ZERO;
       orderItem.setAmount(amount);
       totalAmount = totalAmount.add(amount);
     }
@@ -270,7 +309,7 @@ public class OrderService {
   }
 
 
-  public List<OrderDTO> getClosedOrdersForCustomer(int userId) throws OrderServiceException {
+  public List<ClosedOrderDTO> getClosedOrdersForCustomer(int userId) throws OrderServiceException {
     Optional<User> optionalUser = userRepository.findById(userId);
     if (optionalUser.isEmpty()) {
       throw new OrderServiceException("User not found with ID: " + userId);
@@ -282,10 +321,56 @@ public class OrderService {
     List<Order> closedOrders = allOrders.stream()
         .filter(order -> order.getUser().equals(customer)) // Filter orders for the specific customer
         .filter(order -> order.getState() == OrderState.CLOSED) // Filter closed orders
-        .toList();
+        .collect(Collectors.toList()); // Collect the filtered orders into a list
 
-    return closedOrders.stream()
-        .map(OrderDTO::new)
-        .toList();
+    List<ClosedOrderDTO> closedOrderDTOs = new ArrayList<>();
+
+    for (Order order : closedOrders) {
+      List<OrderItemDTO> orderItems = order.getOrderItems().stream()
+          .map(orderItem -> new OrderItemDTO(
+              orderItem.getId(),
+              orderItem.getProduct().getName(),
+              orderItem.getQuantity(),
+              orderItem.getAmount()
+          ))
+          .collect(Collectors.toList());
+
+      ClosedOrderDTO closedOrderDTO = new ClosedOrderDTO(
+          order.getId(),
+          order.getOrderState(),
+          order.getTotalAmount(),
+          new RegistrationResponseDto(order.getUserDto(), order.getUserId()),
+          orderItems
+      );
+      closedOrderDTOs.add(closedOrderDTO);
+    }
+
+    return closedOrderDTOs;
+  }
+
+  public List<Integer> getOrderItemIds(int orderId) {
+    List<OrderItem> orderItems = orderItemRepository.findByOrderId(orderId);
+    List<Integer> itemIds = orderItems.stream()
+        .map(OrderItem::getId)
+        .collect(Collectors.toList());
+    return itemIds;
+  }
+
+
+  public OrderDTO getInProgressOrderForCustomer(int orderId) throws OrderServiceException {
+    Optional<Order> optionalOrder = orderRepository.findById(orderId);
+    if (optionalOrder.isEmpty()) {
+      throw new OrderServiceException("Order not found with ID: " + orderId);
+    }
+
+    Order order = optionalOrder.get();
+
+    if (order.getState() != OrderState.IN_PROGRESS) {
+      throw new OrderServiceException("The order with ID " + orderId + " is not in progress.");
+    }
+
+    List<OrderItemDTO> orderItems = new ArrayList<>(); // Empty list of OrderItemDTO
+
+    return new OrderDTO(order, orderItems);
   }
 }

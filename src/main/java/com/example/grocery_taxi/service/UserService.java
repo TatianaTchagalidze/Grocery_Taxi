@@ -27,12 +27,13 @@ public class UserService {
             .role(UserRole.valueOf(userDto.getRole()))
             .password(passwordEncoder.encode(userDto.getPassword()))
             .address(userDto.getAddress())
-            .phone_number(userDto.getPhone_number())
+            .phone_number(userDto.getPhoneNumber())
             .build();
 
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
+        int userId = savedUser.getId();
 
-        RegistrationResponseDto registrationResponseDto = new RegistrationResponseDto(userDto);
+        RegistrationResponseDto registrationResponseDto = new RegistrationResponseDto(userDto, userId);
         return registrationResponseDto;
     }
 
@@ -44,10 +45,15 @@ public class UserService {
         }
     }
 
-
     public boolean emailExists(String email) {
 
         Optional<User> existingUser = userRepository.findByEmail(email);
         return existingUser.isPresent();
+    }
+
+
+    public User getUserByEmail(String email) {
+        Optional<User> user = userRepository.findByEmail(email);
+        return user.orElse(null);
     }
 }

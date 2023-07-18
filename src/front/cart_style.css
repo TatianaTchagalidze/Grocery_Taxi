@@ -1,21 +1,24 @@
-/* Global Styles */
 body {
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 20px;
+    background-color: #f8f9fa;
 }
 
 h1 {
     text-align: center;
 }
 
-/* Cart Container Styles */
 .cart-container {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     margin-top: 40px;
 }
 
 #cart-items {
-    list-style-type: none;
+    list-style-type: none; /* Remove bullet points */
     padding: 0;
 }
 
@@ -25,8 +28,7 @@ h1 {
     margin-bottom: 10px;
     padding: 10px;
     border: 1px solid #ccc;
-    background-color: #f7f7f7;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background-color: #fff;
 }
 
 .cart-item-image {
@@ -44,13 +46,14 @@ h1 {
 .cart-item-quantity {
     width: 60px;
     padding: 5px;
-    margin-right: 10px;
     border: 1px solid #ccc;
     border-radius: 4px;
+    text-align: center; /* Center the text in the input */
+    margin-left: auto; /* Move the quantity input to the left as much as possible */
 }
 
 .cart-item-price {
-    margin-left: 10px;
+    margin-right: 20px;
 }
 
 .total-price {
@@ -62,14 +65,54 @@ h1 {
 }
 
 button {
-    padding: 10px 20px;
-    background-color: #036256;
-    color: #fff;
+    margin-top: 20px;
+}
+
+/* Styles for the buttons */
+button {
+    display: inline-block;
+    padding: 6px 12px; /* Adjusted padding */
+    font-size: 12px; /* Adjusted font size */
+    font-weight: bold;
+    text-align: center;
+    text-decoration: none;
     border: none;
+    border-radius: 4px;
     cursor: pointer;
+    background-color: #007bff;
+    color: #ffffff;
     transition: background-color 0.3s ease;
 }
 
-button:hover {
-    background-color: #03483d;
+.button:hover {
+    background-color: #0056b3;
+}
+
+.button.primary {
+    background-color: #4caf50;
+}
+
+.button.primary:hover {
+    background-color: #398038;
+}
+
+.button.secondary {
+    background-color: #f44336;
+}
+
+.button.secondary:hover {
+    background-color: #b72f27;
+}
+
+/* Styles for the "X" symbol */
+.removeButton {
+    width: 30px;
+    height: 50px;
+    padding: 0;
+    border-radius: 50%;
+    font-size: 20px;
+    line-height: 1;
+    text-align: center;
+    background-color: #036256; /* Change the background color to red */
+    color: #ffffff; /* Set the color to white */
 }

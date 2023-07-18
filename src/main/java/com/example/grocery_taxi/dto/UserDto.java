@@ -11,6 +11,7 @@ import javax.validation.constraints.Size;
 @Getter
 @Setter
 public class UserDto {
+
   @NotBlank(message = "Email is required")
   @Email(message = "Invalid email format")
   private String email;
@@ -35,7 +36,5 @@ public class UserDto {
   private String address;
 
   @NotBlank
-  private String phone_number;
-
-
+  private String phoneNumber;
 }

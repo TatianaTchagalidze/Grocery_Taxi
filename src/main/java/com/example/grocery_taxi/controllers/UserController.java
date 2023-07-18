@@ -9,6 +9,8 @@ import com.example.grocery_taxi.exception.ApiError;
 import com.example.grocery_taxi.filter.JwtAuthenticationFilter;
 import com.example.grocery_taxi.service.AuthenticationService;
 import com.example.grocery_taxi.service.UserService;
+import java.util.HashMap;
+import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -56,17 +58,28 @@ public class UserController {
     boolean isAuthenticated = authenticationService.authenticateUser(loginRequestDtoForm.getEmail(),
         loginRequestDtoForm.getPassword());
     if (isAuthenticated) {
-      String token = jwtUtil.generateToken(loginRequestDtoForm.getEmail()); // Use the email as the username
-      jwtAuthenticationFilter.saveTokenInCookies(request, response, token);
+      // Fetch the user from the database based on the email
+      User user = userService.getUserByEmail(loginRequestDtoForm.getEmail());
 
-      return ResponseEntity.ok().build();
+      if (user != null) {
+        // Add the user role to the response
+        String role = user.getRole().name(); // Assuming the role is an Enum type
+        String token = jwtUtil.generateToken(loginRequestDtoForm.getEmail()); // Use the email as the username
+        jwtAuthenticationFilter.saveTokenInCookies(request, response, token);
+
+        // Create a custom response object containing the user role
+        Map<String, Object> responseBody = new HashMap<>();
+        responseBody.put("role", role);
+
+        return ResponseEntity.ok(responseBody);
+      }
     }
 
     // Authentication failed
     return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
   }
 
-  @GetMapping("/logout")
+  @RequestMapping(value = "/logout", method = RequestMethod.POST)
   public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response) {
     // Remove the JWT token from cookies using JwtAuthenticationFilter
     jwtAuthenticationFilter.removeTokenFromCookies(response);

@@ -35,7 +35,7 @@ public class JwtAuthenticationFilter extends BasicAuthenticationFilter {
 
   public void saveTokenInCookies(HttpServletRequest request, HttpServletResponse response, String token) {
     Cookie jwtCookie = new Cookie("jwt", token);
-    jwtCookie.setMaxAge(24 * 60 * 60); // Set the cookie expiration time (in seconds)
+    jwtCookie.setMaxAge(30 * 60); // Set the cookie expiration time (in seconds)
     jwtCookie.setPath("/"); // Set the cookie path
     response.addCookie(jwtCookie);
   }

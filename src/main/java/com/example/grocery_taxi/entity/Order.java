@@ -3,6 +3,7 @@ package com.example.grocery_taxi.entity;
 import com.example.grocery_taxi.dto.UserDto;
 import com.example.grocery_taxi.model.OrderState;
 
+import com.example.grocery_taxi.model.UserRole;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.persistence.*;
@@ -82,8 +83,13 @@ public class Order {
     userDto.setFirstName(user.getFirstName());
     userDto.setLastName(user.getLastName());
     userDto.setAddress(user.getAddress());
-    userDto.setPhone_number(user.getPhone_number());
+    userDto.setPhoneNumber(user.getPhone_number());
+    userDto.setRole(String.valueOf(user.getRole()));
     // Set other properties as needed
     return userDto;
+  }
+
+  public int getUserId() {
+    return user.getId();
   }
 }

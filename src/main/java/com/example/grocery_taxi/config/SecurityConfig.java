@@ -7,6 +7,7 @@ import java.util.Arrays;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -52,6 +53,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         .antMatchers("/users").permitAll()
         .antMatchers("/health").permitAll()
         .antMatchers("/login").permitAll()
+        .antMatchers("/logout").authenticated()
         .antMatchers(HttpMethod.POST, "/orders").authenticated()
         .antMatchers(HttpMethod.PUT, "/orders/**").authenticated()
         .antMatchers(HttpMethod.DELETE, "/orders/**").authenticated()
@@ -59,6 +61,14 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         .anyRequest().permitAll()
         .and()
         .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+        .and()
+        .logout()
+        .logoutUrl("/logout") // Specify the URL for logout
+        .logoutSuccessHandler((request, response, authentication) -> {
+          // Custom logic here if needed
+          response.setStatus(HttpStatus.OK.value()); // Set the response status to OK (200) instead of redirecting
+          response.getWriter().flush();
+        })
         .and()
         .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
   }
