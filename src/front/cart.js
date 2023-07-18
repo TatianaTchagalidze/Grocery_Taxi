@@ -4,8 +4,6 @@ const orderFromStorage = JSON.parse(sessionStorage.getItem('order'));
 const orderItems = orderFromStorage.orderItems;
 const itemIds = orderItems.map(orderItem => orderItem.id);
 
-console.log(orderItems);
-console.log(itemIds);
 
 // Retrieve the order object from storage
 
@@ -99,12 +97,18 @@ function renderCartItems(cartItems) {
 }
 
 function updateCartItemQuantity(item, quantity) {
-  const orderItems = JSON.parse(sessionStorage.getItem('order')).orderItems;
-  const orderId = JSON.parse(sessionStorage.getItem('order')).id;
-  console.log(orderItems, item)
+  const productName = item.product.name; // Retrieve the productName from the item object
 
-  const  itemId = orderItems.find(orderItem => orderItem.productName === item.product.name).id;
-  console.log(itemId, quantity)
+  const orderItems = JSON.parse(sessionStorage.getItem('order')).orderItems;
+  const orderItem = orderItems.find(orderItem => orderItem.productName === productName);
+
+  if (!orderItem) {
+    console.error('Error: Order item not found.');
+    return;
+  }
+
+  const itemId = orderItem.id;
+  const orderId = JSON.parse(sessionStorage.getItem('order')).id;
 
   const requestBody = {
     quantity: quantity,
@@ -126,9 +130,9 @@ function updateCartItemQuantity(item, quantity) {
         }
       })
       .then(data => {
-        // Item quantity updated successfully
-        item.quantity = quantity;
-        updateCartDisplay();
+        // Item quantity updated successfully in the database
+        item.quantity = quantity; // Update the quantity in the cartItemsFromStorage
+        updateCartDisplay(); // Update the cart display with the new quantity
       })
       .catch(error => {
         console.error('Error:', error);
@@ -136,10 +140,21 @@ function updateCartItemQuantity(item, quantity) {
       });
 }
 
+
+
 function removeCartItem(item) {
+  const productName = item.product.name; // Retrieve the productName from the item object
+
   const orderItems = JSON.parse(sessionStorage.getItem('order')).orderItems;
+  const orderItem = orderItems.find(orderItem => orderItem.productName === productName);
+
+  if (!orderItem) {
+    console.error('Error: Order item not found.');
+    return;
+  }
+
+  const itemId = orderItem.id;
   const orderId = JSON.parse(sessionStorage.getItem('order')).id;
-  const itemId = orderItems.find(orderItem => orderItem.productName === item.product.name).id;
 
   fetch(`http://localhost:8080/orders/${orderId}/items/${itemId}`, {
     method: 'DELETE',
@@ -147,9 +162,15 @@ function removeCartItem(item) {
   })
       .then(response => {
         if (response.ok) {
-          // Item removed successfully, update the cart display
-          const updatedCartItems = orderFromStorage.filter(orderItem => orderItem.producname !== item.product.name);
+          // Item removed successfully from the database, now update the cart display
+          const updatedCartItems = JSON.parse(sessionStorage.getItem('cart')).filter(
+              cartItem => cartItem.product.name !== productName
+          );
+
+          // Update the cart in session storage
           sessionStorage.setItem('cart', JSON.stringify(updatedCartItems));
+
+          // Update the cart display
           updateCartDisplay();
           return response;
         } else {
@@ -161,6 +182,10 @@ function removeCartItem(item) {
         alert('Failed to remove item from cart. Please try again.');
       });
 }
+
+
+
+
 
 // Function to update the cart display
 function updateCartDisplay() {
