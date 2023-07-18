@@ -50,7 +50,7 @@ function renderCartItems(cartItems) {
       quantityInput.min = 1;
       quantityInput.value = item.quantity;
       quantityInput.classList.add('cart-item-quantity');
-      quantityInput.addEventListener('change', () => {
+      quantityInput.addEventListener('input', () => {
         const quantity = parseInt(quantityInput.value, 10);
         updateCartItemQuantity(item, quantity);
       });
@@ -119,22 +119,20 @@ function updateCartItemQuantity(item, quantity) {
   })
       .then(response => {
         if (response.ok) {
+          // Item quantity updated successfully in the database
+          item.quantity = quantity; // Update the quantity in the cartItemsFromStorage
+          updateCartItemPrice(item); // Update the cart item price with the new quantity
+          updateCartDisplay(cartItemsFromStorage); // Pass the updated cartItemsFromStorage to update the cart display
           return response;
         } else {
           throw new Error('Failed to update item quantity.');
         }
-      })
-      .then(data => {
-        // Item quantity updated successfully in the database
-        item.quantity = quantity; // Update the quantity in the cartItemsFromStorage
-        updateCartDisplay(); // Update the cart display with the new quantity
       })
       .catch(error => {
         console.error('Error:', error);
         alert('Failed to update item quantity. Please try again.');
       });
 }
-
 
 function removeCartItem(item) {
   const productName = item.product.name; // Retrieve the productName from the item object
@@ -178,12 +176,20 @@ function removeCartItem(item) {
 }
 
 
+function updateCartItemPrice(item) {
+  const quantity = item.quantity;
+  const totalPriceForItem = quantity * item.product.price;
 
+  // Find the price element in the cart item container and update its content
+  const cartItemContainer = document.querySelector(`[data-product-id="${item.product.id}"]`);
+  const priceElement = cartItemContainer.querySelector('.cart-item-price');
+  priceElement.textContent = `$${totalPriceForItem.toFixed(2)}`;
+}
 
 
 // Function to update the cart display
-function updateCartDisplay() {
-  const cartItemsFromStorage = JSON.parse(sessionStorage.getItem('cart'));
+function updateCartDisplay(cartItems = null) {
+  const cartItemsFromStorage = cartItems || JSON.parse(sessionStorage.getItem('cart'));
   renderCartItems(cartItemsFromStorage);
 
   // Recalculate the total price
@@ -194,6 +200,7 @@ function updateCartDisplay() {
   });
   totalPriceElement.textContent = `Total Price: $${totalPrice.toFixed(2)}`;
 }
+
 
 
 // Function to handle continuing to pay
