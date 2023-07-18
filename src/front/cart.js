@@ -102,11 +102,6 @@ function updateCartItemQuantity(item, quantity) {
   const orderItems = JSON.parse(sessionStorage.getItem('order')).orderItems;
   const orderItem = orderItems.find(orderItem => orderItem.productName === productName);
 
-  if (!orderItem) {
-    console.error('Error: Order item not found.');
-    return;
-  }
-
   const itemId = orderItem.id;
   const orderId = JSON.parse(sessionStorage.getItem('order')).id;
 
@@ -139,7 +134,6 @@ function updateCartItemQuantity(item, quantity) {
         alert('Failed to update item quantity. Please try again.');
       });
 }
-
 
 
 function removeCartItem(item) {
