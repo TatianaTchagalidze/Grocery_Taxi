@@ -26,6 +26,7 @@ function renderCartItems(cartItems) {
 
     cartItems.forEach(item => {
       const listItem = document.createElement('li');
+      listItem.setAttribute('data-product-id', item.product.id);
 
       // Create a container for the product information
       const productContainer = document.createElement('div');
@@ -109,6 +110,8 @@ function updateCartItemQuantity(item, quantity) {
     quantity: quantity,
   };
 
+  console.log(itemId, orderId, quantity);
+
   fetch(`http://localhost:8080/orders/${orderId}/items/${itemId}`, {
     method: 'PUT',
     headers: {
@@ -181,10 +184,14 @@ function updateCartItemPrice(item) {
   const totalPriceForItem = quantity * item.product.price;
 
   // Find the price element in the cart item container and update its content
-  const cartItemContainer = document.querySelector(`[data-product-id="${item.product.id}"]`);
+  const cartItemContainer = cartItemsList.querySelector(`[data-product-id="${item.product.id}"]`);
+  console.log("Item ID:", item.product.id);
+  console.log("CartItemContainer:", cartItemContainer);
+
   const priceElement = cartItemContainer.querySelector('.cart-item-price');
   priceElement.textContent = `$${totalPriceForItem.toFixed(2)}`;
 }
+
 
 
 // Function to update the cart display
@@ -192,14 +199,18 @@ function updateCartDisplay(cartItems = null) {
   const cartItemsFromStorage = cartItems || JSON.parse(sessionStorage.getItem('cart'));
   renderCartItems(cartItemsFromStorage);
 
-  // Recalculate the total price
+
+  // Calculate the total price
   let totalPrice = 0;
   cartItemsFromStorage.forEach(item => {
     const totalPriceForItem = item.quantity * item.product.price;
     totalPrice += totalPriceForItem;
   });
+
+  // Update the total price element
   totalPriceElement.textContent = `Total Price: $${totalPrice.toFixed(2)}`;
 }
+
 
 
 
