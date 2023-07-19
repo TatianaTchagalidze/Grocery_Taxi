@@ -22,19 +22,20 @@
 <div class="container">
     <h1 class="mt-5">Order History</h1>
 
-    <table class="table order-history-table">
+    <!-- For Closed Orders -->
+    <table>
         <thead>
         <tr>
-            <th scope="col">Order ID</th>
-            <th scope="col">Order State</th>
-            <th scope="col">Customer Email</th>
-            <th scope="col">Total Amount</th>
+            <th>Order ID</th>
+            <th>Date</th>
+            <th>Customer</th>
+            <th>Total Amount</th>
         </tr>
         </thead>
-        <tbody id="order-history-body">
-        <!-- Table rows will be dynamically generated here -->
-        </tbody>
+        <tbody id="closed-order-body"></tbody>
     </table>
+    <button id="move-to-order-page">Move to Order Page</button>
+
 </div>
 
 <script src="history.js"></script>

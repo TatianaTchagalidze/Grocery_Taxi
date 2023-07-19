@@ -116,3 +116,16 @@ button {
     background-color: #036256; /* Change the background color to red */
     color: #ffffff; /* Set the color to white */
 }
+.cancel-button {
+    background-color: #e74c3c; /* Red background color */
+    color: #fff; /* White text color */
+    padding: 8px 16px; /* Add padding to the button */
+    border: none; /* Remove border */
+    border-radius: 4px; /* Add rounded corners */
+    cursor: pointer; /* Change cursor to pointer on hover */
+}
+
+/* Add a hover effect */
+.cancel-button:hover {
+    background-color: #c0392b; /* Darker red background color on hover */
+}

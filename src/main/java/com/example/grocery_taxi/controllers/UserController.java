@@ -63,13 +63,16 @@ public class UserController {
 
       if (user != null) {
         // Add the user role to the response
-        String role = user.getRole().name(); // Assuming the role is an Enum type
+        String role = user.getRole().name();
+        long userId = user.getId(); // Assuming the method to get userId exists in the User class' // Assuming the role is an Enum type
         String token = jwtUtil.generateToken(loginRequestDtoForm.getEmail()); // Use the email as the username
         jwtAuthenticationFilter.saveTokenInCookies(request, response, token);
 
         // Create a custom response object containing the user role
         Map<String, Object> responseBody = new HashMap<>();
         responseBody.put("role", role);
+        responseBody.put("userId", userId);
+
 
         return ResponseEntity.ok(responseBody);
       }

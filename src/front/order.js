@@ -14,10 +14,10 @@ checkoutButton.addEventListener('click', checkoutCart);
 
 // Declare cart variable and retrieve cart from session storage
 let cart = [];
-// const storedCart = sessionStorage.getItem('cart');
-// if (storedCart) {
-//   cart = JSON.parse(storedCart);
-// }
+const storedCart = sessionStorage.getItem('cart');
+if (storedCart) {
+  cart = JSON.parse(storedCart);
+}
 
 // Retrieve order from session storage
 const storedOrder = sessionStorage.getItem('order');

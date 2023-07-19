@@ -1,19 +1,37 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const orderFromStorage = JSON.parse(sessionStorage.getItem('order'));
-    const userId = orderFromStorage.userInfo.id;
+    const idFromStorage = JSON.parse(sessionStorage.getItem('userId'));
+    const userId = idFromStorage;
 
-    // Fetch "In Progress" orders from the server using the retrieved userId
-    fetch(`http://localhost:8080/orders/in_progress/${userId}`, {
-        credentials: 'include'
-    })
-        .then(response => response.json())
-        .then(data => {
-            // Call a function to populate the table with the retrieved data
-            populateOrderHistoryTable(data);
-        })
-        .catch(error => {
-            console.error('Error fetching order history:', error);
+    // Function to populate the table with order history data
+    function populateOrderHistoryTable(orderHistoryData, tableBody) {
+        // Always treat the data as an array, even if it contains only one item
+        const orders = Array.isArray(orderHistoryData) ? orderHistoryData : [orderHistoryData];
+
+        orders.forEach(order => {
+            const row = document.createElement('tr');
+
+            // Create table cells for each order property
+            const orderIdCell = document.createElement('td');
+            orderIdCell.textContent = order.id;
+            row.appendChild(orderIdCell);
+
+            const dateCell = document.createElement('td');
+            dateCell.textContent = order.orderState;
+            row.appendChild(dateCell);
+
+            const customerCell = document.createElement('td');
+            customerCell.textContent = order.userInfo.email;
+            row.appendChild(customerCell);
+
+            const totalAmountCell = document.createElement('td');
+            totalAmountCell.textContent = order.totalAmount;
+            row.appendChild(totalAmountCell);
+
+            // Append the row to the table body
+            tableBody.appendChild(row);
         });
+    }
+
 
     // Fetch "Closed" orders from the server using the retrieved userId
     fetch(`http://localhost:8080/orders/closed/${userId}`, {
@@ -21,43 +39,21 @@ document.addEventListener('DOMContentLoaded', function () {
     })
         .then(response => response.json())
         .then(data => {
-            // Call a function to populate the table with the retrieved data
-            populateOrderHistoryTable(data);
+            const closedTableBody = document.getElementById('closed-order-body');
+            populateOrderHistoryTable(data, closedTableBody);
         })
         .catch(error => {
-            console.error('Error fetching order history:', error);
+            console.error('Error fetching "Closed" order history:', error);
         });
 });
 
-function populateOrderHistoryTable(orderHistoryData) {
-    const orderHistoryBody = document.getElementById('order-history-body');
+// Handle click event for the "Move to Order Page" button
+document.getElementById('move-to-order-page').addEventListener('click', moveToOrderPage);
 
-    // Iterate over each order in the data
-    orderHistoryData.forEach(order => {
-        const row = document.createElement('tr');
-
-        // Create table cells for each order property
-        const orderIdCell = document.createElement('td');
-        orderIdCell.textContent = order.id;
-        row.appendChild(orderIdCell);
-
-        const dateCell = document.createElement('td');
-        dateCell.textContent = order.orderState;
-        row.appendChild(dateCell);
-
-        const customerCell = document.createElement('td');
-        customerCell.textContent = order.userInfo.email;
-        row.appendChild(customerCell);
-
-        const totalAmountCell = document.createElement('td');
-        totalAmountCell.textContent = order.totalAmount;
-        row.appendChild(totalAmountCell);
-
-        // Append the row to the table body
-        orderHistoryBody.appendChild(row);
-    });
+function moveToOrderPage() {
+    // Redirect the user to order.js
+    window.location.href = 'orders.html';
 }
-
 function logout() {
     fetch('http://localhost:8080/logout', {
         method: 'POST', // Change the method back to GET
@@ -65,6 +61,7 @@ function logout() {
     })
         .then(response => {
             if (response.ok) {
+                clearSessionStorage(); // Call the function to clear the session storage
                 // If the logout was successful, redirect the user to the registration.html page
                 window.location.href = 'registration.html';
             } else {
@@ -74,4 +71,7 @@ function logout() {
         .catch(error => {
             console.error('Error during logout:', error);
         });
+}
+function clearSessionStorage() {
+    sessionStorage.removeItem('order');
 }

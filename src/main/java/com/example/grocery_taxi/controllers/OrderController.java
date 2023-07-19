@@ -66,7 +66,7 @@ public class OrderController {
   }
 
 
-@DeleteMapping("/{orderId}/items/{itemId}")
+  @DeleteMapping("/{orderId}/items/{itemId}")
   public ResponseEntity<String> removeOrderItem(@PathVariable int orderId, @PathVariable int itemId) throws OrderServiceException {
     orderService.removeOrderItem(orderId, itemId);
     return ResponseEntity.ok("Order item removed successfully.");
@@ -77,6 +77,18 @@ public class OrderController {
     orderService.confirmOrder(orderId);
     return ResponseEntity.ok("Order confirmed successfully.");
   }
+
+  @GetMapping("/{orderId}")
+  public ResponseEntity<String> getOrderState(@PathVariable int orderId) throws OrderServiceException {
+    String orderState = orderService.getOrderState(orderId);
+
+    if (orderState != null) {
+      return ResponseEntity.ok(orderState);
+    }
+
+    return ResponseEntity.notFound().build();
+  }
+
 
   @PutMapping("/{orderId}/cancel")
   public ResponseEntity<String> cancelOrder(@PathVariable int orderId) throws OrderServiceException {

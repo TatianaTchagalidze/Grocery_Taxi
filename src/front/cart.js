@@ -1,5 +1,5 @@
 // Constants
-const cartItemsFromStorage = JSON.parse(sessionStorage.getItem('cart'));
+let cartItemsFromStorage = JSON.parse(sessionStorage.getItem('cart'));
 const orderFromStorage = JSON.parse(sessionStorage.getItem('order'));
 const orderItems = orderFromStorage.orderItems;
 const itemIds = orderItems.map(orderItem => orderItem.id);
@@ -13,6 +13,11 @@ totalPriceElement.classList.add('total-price');
 
 
 renderCartItems(cartItemsFromStorage);
+
+const cancelOrderButton = document.getElementById('cancel-order-button');
+cancelOrderButton.addEventListener('click', () => cancelOrder(orderFromStorage));
+
+
 
 function renderCartItems(cartItems) {
   cartItemsList.innerHTML = '';
@@ -125,6 +130,8 @@ function updateCartItemQuantity(item, quantity) {
           // Item quantity updated successfully in the database
           item.quantity = quantity; // Update the quantity in the cartItemsFromStorage
           updateCartItemPrice(item); // Update the cart item price with the new quantity
+          sessionStorage.setItem('cart', JSON.stringify(cartItemsFromStorage));
+
           updateCartDisplay(cartItemsFromStorage); // Pass the updated cartItemsFromStorage to update the cart display
           return response;
         } else {
@@ -165,6 +172,8 @@ function removeCartItem(item) {
           // Update the cart in session storage
           sessionStorage.setItem('cart', JSON.stringify(updatedCartItems));
 
+          cartItemsFromStorage = updatedCartItems;
+          updateCartDisplay(cartItemsFromStorage);
           // Update the cart display
           updateCartDisplay();
           return response;
@@ -192,13 +201,11 @@ function updateCartItemPrice(item) {
   priceElement.textContent = `$${totalPriceForItem.toFixed(2)}`;
 }
 
-
-
 // Function to update the cart display
 function updateCartDisplay(cartItems = null) {
-  const cartItemsFromStorage = cartItems || JSON.parse(sessionStorage.getItem('cart'));
+  let cartItemsFromStorage = cartItems || JSON.parse(sessionStorage.getItem('cart'));
   renderCartItems(cartItemsFromStorage);
-
+  console.log(cartItemsFromStorage);
 
   // Calculate the total price
   let totalPrice = 0;
@@ -211,9 +218,6 @@ function updateCartDisplay(cartItems = null) {
   totalPriceElement.textContent = `Total Price: $${totalPrice.toFixed(2)}`;
 }
 
-
-
-
 // Function to handle continuing to pay
 function handleConfirmOrder() {
   const orderId = orderFromStorage.id; // Use the order ID from the stored order object
@@ -225,6 +229,7 @@ function handleConfirmOrder() {
       .then(response => {
         if (response.ok) {
           alert('Order confirmed successfully.');
+          clearSessionStorage(); // Call the function to clear the session storage
           window.location.href = 'tracking.html'; // Redirect to tracking.html
         } else {
           throw new Error('Failed to confirm order.');
@@ -235,8 +240,46 @@ function handleConfirmOrder() {
         alert('Failed to confirm order. Please try again.');
       });
 }
+function clearSessionStorage() {
+  // Clear the cart and order data from the session storage
+  sessionStorage.removeItem('cart');
+}
 
 function handleModifyOrder() {
   // Redirect to orders.html
   window.location.href = 'orders.html';
+}
+
+function cancelOrder(order) {
+  if (!order || !order.id) {
+    console.error('Order not found or invalid.');
+    return;
+  }
+
+  fetch(`http://localhost:8080/orders/${order.id}/cancel`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    credentials: 'include'
+  })
+      .then(response => {
+        if (response.ok) {
+          // The order was canceled successfully
+          alert('Order canceled successfully.');
+          // Remove order from session storage
+          sessionStorage.removeItem('order');
+          sessionStorage.removeItem('cart');
+          sessionStorage.removeItem('orderItems');
+          // Clear the cart
+          // Redirect to the history page to show updated orders
+          window.location.href = 'orders.html';
+
+        } else {
+          console.error('Failed to cancel the order:', response.statusText);
+        }
+      })
+      .catch(error => {
+        console.error('Error canceling the order:', error);
+      });
 }

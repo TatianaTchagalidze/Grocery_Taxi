@@ -373,4 +373,15 @@ public class OrderService {
 
     return new OrderDTO(order, orderItems);
   }
+
+  public String getOrderState(int orderId) throws OrderServiceException {
+    Optional<Order> optionalOrder = orderRepository.findById(orderId);
+    if (optionalOrder.isEmpty()) {
+      throw new OrderServiceException("Order not found with ID: " + orderId);
+    }
+
+    Order order = optionalOrder.get();
+    return order.getState().toString(); // Assuming the state field is an enum, convert it to a String
+  }
+
 }

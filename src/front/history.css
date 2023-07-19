@@ -1,7 +1,88 @@
-/* Additional CSS styles */
+/* Set some default styles */
 body {
-    padding-top: 50px;
+    padding-top: 100px;
 }
-.order-history-table {
-    margin-top: 50px;
+
+.container {
+    max-width: 80%;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+}
+
+h1 {
+    text-align: center;
+}
+
+/* Table styles */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 30px;
+}
+
+th, td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: left;
+}
+
+thead {
+    background-color: #f2f2f2;
+}
+
+/* Navbar styles */
+.navbar {
+    margin-bottom: 20px;
+}
+
+.navbar-brand {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+/* Logout button styles */
+.btn-danger {
+    color: #fff;
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+    border-color: #bd2130;
+}
+
+/* CSS Styles for the "Move to Order Page" button */
+#move-to-order-page {
+    display: inline-block;
+    padding: 10px 20px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #fff;
+    background-color: #037c38;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#move-to-order-page:hover {
+    background-color: #037c38;
+}
+
+#move-to-order-page:focus {
+    outline: none;
+}
+
+/* Optional: Add some margin or positioning styles if needed */
+#move-to-order-page {
+    margin-top: 20px;
+}
+
+
+/* Hide the fixed-top navbar on the printed version */
+@media print {
+    .navbar.fixed-top {
+        display: none;
+    }
 }

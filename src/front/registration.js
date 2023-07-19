@@ -101,6 +101,7 @@ function loginUser(event) {
         .then(data => {
             // Save the user role in session storage
             sessionStorage.setItem('role', data.role);
+            sessionStorage.setItem('userId', data.userId);
 
             // Redirect based on user role
             if (data.role === 'Courier') {
