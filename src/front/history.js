@@ -51,6 +51,8 @@ document.addEventListener('DOMContentLoaded', function () {
 document.getElementById('move-to-order-page').addEventListener('click', moveToOrderPage);
 
 function moveToOrderPage() {
+    sessionStorage.removeItem('orderItems');
+    sessionStorage.removeItem('order');
     // Redirect the user to order.js
     window.location.href = 'orders.html';
 }
@@ -61,7 +63,10 @@ function logout() {
     })
         .then(response => {
             if (response.ok) {
-                clearSessionStorage(); // Call the function to clear the session storage
+                clearSessionStorage();
+                sessionStorage.removeItem('role');
+                sessionStorage.removeItem('orderItems');
+                sessionStorage.removeItem('userId');
                 // If the logout was successful, redirect the user to the registration.html page
                 window.location.href = 'registration.html';
             } else {

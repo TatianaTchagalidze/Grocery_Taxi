@@ -212,3 +212,10 @@ function redirectToHistoryPage(event) {
   event.preventDefault();
   window.location.href = 'history.html';
 }
+
+const logOutLink = document.querySelector('a[href="logout"]');
+logOutLink.addEventListener('click',redirectToSignInPage);
+function redirectToSignInPage(event) {
+  event.preventDefault();
+  window.location.href = 'registration.html'
+}

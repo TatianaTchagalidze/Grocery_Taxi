@@ -1,133 +1,112 @@
-body {
-    color: #000;
-    overflow-x: hidden;
-    height: 100%;
-    background-color: #8c9eff;
-    background-repeat: no-repeat;
-}
-
-.card {
-    z-index: 0;
-    background-color: #eceff1;
-    padding-bottom: 20px;
-    margin-top: 90px;
-    margin-bottom: 90px;
-    border-radius: 10px;
-}
-
-.top {
-    padding-top: 40px;
-    padding-left: 13% !important;
-    padding-right: 13% !important;
-}
-
-/* Icon progressbar */
-
-#progressbar {
-    margin-bottom: 30px;
-    overflow: hidden;
-    color: #455a64;
-    padding-left: 0;
-    margin-top: 30px;
-}
-
-#progressbar li {
-    list-style-type: none;
-    font-size: 13px;
-    width: 25%;
-    float: left;
-    position: relative;
-    font-weight: 400;
-}
-
-#progressbar .step0::before {
-    font-family: FontAwesome;
-    content: '\f10c';
-    color: #fff;
-}
-
-#progressbar li::before {
-    width: 40px;
-    height: 40px;
-    line-height: 45px;
-    display: block;
-    font-size: 20px;
-    background: #c5cae9;
-    border-radius: 50%;
-    margin: auto;
+/* Import Google font - Poppins */
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700&display=swap");
+* {
+    margin: 0;
     padding: 0;
+    box-sizing: border-box;
+    font-family: "Poppins", sans-serif;
 }
 
-/* Progressbar connector */
-#progressbar li::after {
-    content: '';
+body {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f6f7fb;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+    max-width: 400px;
     width: 100%;
-    height: 12px;
-    background-color: #c5cae9;
+}
+
+.container .card {
+    width: 100%;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+.container .steps {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+}
+
+.steps .circle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100px;
+    width: 100px;
+    color: #999;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 50%;
+    background: #fff;
+    border: 3px solid #e0e0e0;
+    transition: all 200ms ease;
+}
+
+.steps .circle.active {
+    border-color: #bb81ff;
+    color: #012823;
+}
+
+.steps .progress-bar {
     position: absolute;
-    top: 16px;
-    left: 0;
+    height: 4px;
+    width: 100%;
+    background: #e0e0e0;
     z-index: -1;
 }
 
-#progressbar li:last-child::after {
-    border-top-right-radius: 10px;
-    border-bottom-right-radius: 10px;
+.progress-bar .indicator {
     position: absolute;
-    left: -50%;
+    height: 100%;
+    width: 0%;
+    background: #bb81ff;
+    transition: all 300ms ease;
 }
 
-#progressbar li:nth-child(2)::after,
-#progressbar li:nth-child(3)::after {
-    left: -50%;
+.container .top {
+    margin-top: 20px;
 }
 
-#progressbar li:first-child::after {
-    border-top-left-radius: 10px;
-    border-bottom-right-radius: 10px;
-    position: absolute;
-    left: 50%;
+.container .icon-content {
+    flex: 1;
+    text-align: center;
 }
 
-/* Color number of the step and the connect tor before it */
-
-#progressbar li.active::before,
-#progressbar li.active::after {
-    background-color: #651fff;
+.container .buttons {
+    display: flex;
+    gap: 20px;
 }
 
-#progressbar li.active::before {
-    font-family: FontAwesome;
-    content: '\f00c';
+.buttons button {
+    padding: 8px 25px;
+    background: #2554d5;
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 400;
+    cursor: pointer;
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.05);
+    transition: all 200ms linear;
 }
 
-.icon {
-    width: 60px;
-    height: 60px;
-    margin-right: 15px;
+.buttons button:active {
+    transform: scale(0.97);
 }
 
-.icon-content {
-    padding-bottom: 20px;
-}
-
-.btn-primary {
-    background-color: #007bff;
-    border-color: #007bff;
-}
-
-.btn-primary:hover {
-    background-color: #0069d9;
-    border-color: #0062cc;
-}
-
-.btn-primary:focus,
-.btn-primary.focus {
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.5);
-}
-
-@media screen and (max-width: 992px) {
-    .icon-content {
-        width: 50%;
-    }
+.buttons button:disabled {
+    background: #598da8;
+    cursor: not-allowed;
 }
