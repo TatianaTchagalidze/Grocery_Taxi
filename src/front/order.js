@@ -1,37 +1,53 @@
-// Create an order and fetch the orderId
-fetch('http://localhost:8080/orders', {
-  method: 'POST',
-})
-  .then(response => response.json())
-  .then(data => {
-    const orderId = data.id;
-    fetchProductData(orderId);
-  })
-  .catch(error => {
-    console.error('Error creating order:', error);
-  });
+// Constants
+const searchInput = document.getElementById('search-input');
+const searchButton = document.getElementById('search-button');
+const productContainer = document.getElementById('product-container');
+const cartItems = document.getElementById('cart-items');
+const checkoutButton = document.getElementById('checkout-button');
+let order; // Variable to store the order
+
+// Event listeners
+searchButton.addEventListener('click', searchProducts);
+checkoutButton.addEventListener('click', checkoutCart);
 
 // Fetch product data and populate the product container
-fetch('http://localhost:8080/products')
-  .then(response => response.json())
-  .then(data => {
-    const productContainer = document.getElementById('product-container');
-    data.forEach(product => {
-      const productElement = createProductElement(product);
-      productContainer.appendChild(productElement);
-    });
-  })
-  .catch(error => {
-    console.error('Error fetching product data:', error);
-  });
+
+// Declare cart variable and retrieve cart from session storage
+let cart = [];
+const storedCart = sessionStorage.getItem('cart');
+if (storedCart) {
+  cart = JSON.parse(storedCart);
+}
+
+// Retrieve order from session storage
+const storedOrder = sessionStorage.getItem('order');
+if (storedOrder) {
+  order = JSON.parse(storedOrder);
+}
+
+fetchProductData();
+
+function fetchProductData() {
+  fetch('http://localhost:8080/products')
+      .then(response => response.json())
+      .then(data => {
+        data.forEach(product => {
+          const productElement = createProductElement(product);
+          productContainer.appendChild(productElement);
+        });
+      })
+      .catch(error => {
+        console.error('Error fetching product data:', error);
+      });
+}
 
 function createProductElement(product) {
   const productElement = document.createElement('div');
   productElement.classList.add('product');
 
   const imageElement = document.createElement('img');
-  imageElement.src = `images/${product.id}.png`; // Set the product image URL
-  imageElement.alt = product.name; // Set the product name as the alt text
+  imageElement.src = `images/${product.id}.png`;
+  imageElement.alt = product.name;
   productElement.appendChild(imageElement);
 
   const nameElement = document.createElement('h3');
@@ -63,16 +79,10 @@ function createProductElement(product) {
   return productElement;
 }
 
-// Search functionality
-const searchInput = document.getElementById('search-input');
-const searchButton = document.getElementById('search-button');
-searchButton.addEventListener('click', searchProducts);
-
 function searchProducts() {
   const searchQuery = searchInput.value.toLowerCase();
   const productElements = document.getElementsByClassName('product');
 
-  // Iterate through each product element and check if it matches the search query
   for (const productElement of productElements) {
     const productName = productElement.querySelector('h3').textContent.toLowerCase();
     const productDescription = productElement.querySelector('p').textContent.toLowerCase();
@@ -85,80 +95,127 @@ function searchProducts() {
   }
 }
 
-
-// Cart functionality
-const cartItems = document.getElementById('cart-items');
-const checkoutButton = document.getElementById('checkout-button');
-checkoutButton.addEventListener('click', checkoutCart);
-
-const cart = [];
-
 function addToCart(product, quantity) {
-  const cartItem = {
-    product: product,
-    quantity: quantity
-  };
-  cart.push(cartItem);
-  updateCartDisplay();
-  fetchOrderItems(orderId); // Replace 'orderId' with the actual order ID
-}
+  const existingCartItemIndex = cart.findIndex(item => item.product.id === product.id);
 
-function updateCartDisplay() {
+  if (existingCartItemIndex !== -1) {
+    // If the product is already in the cart, update the quantity
+    cart[existingCartItemIndex].quantity = quantity;
+  } else {
+    // If the product is not in the cart, add a new cart item
+    const cartItem = {
+      product: product,
+      quantity: quantity
+    };
+    cart.push(cartItem);
+  }
+
+  // Remove previous cart items from the cart items container
   cartItems.innerHTML = '';
 
+  // Add the updated cart items to the cart items container
   cart.forEach(cartItem => {
-    const cartItemElement = document.createElement('li');
-    cartItemElement.textContent = `${cartItem.product.name} - Quantity: ${cartItem.quantity}`;
-    cartItems.appendChild(cartItemElement);
+    cartItems.appendChild(createCartItemElement(cartItem));
   });
+
+  saveCartToStorage();
+}
+
+function saveCartToStorage() {
+  sessionStorage.setItem('cart', JSON.stringify(cart));
+}
+
+function createCartItemElement(cartItem) {
+  const cartItemElement = document.createElement('li');
+  cartItemElement.textContent = `${cartItem.product.name} - Quantity: ${cartItem.quantity}`;
+  return cartItemElement;
 }
 
 function checkoutCart() {
-  localStorage.setItem('cartItems', JSON.stringify(cart));
-  window.location.href = 'cart.html'; // Replace 'cart.html' with the actual cart page URL
+  if (cart.length === 0) {
+    console.log('Cart is empty. Cannot create order.');
+    return; // Exit the function if the cart is empty
+  }
+
+  const cartItemElements = cartItems.getElementsByTagName('li');
+  const orderItems = Array.from(cartItemElements).map(cartItemElement => {
+    const productName = cartItemElement.textContent.split(' - ')[0];
+    const quantity = parseInt(cartItemElement.textContent.split(' - ')[1].replace('Quantity: ', ''), 10);
+    const product = getProductByName(productName);
+    return {
+      productId: product.id,
+      quantity: quantity
+    };
+  });
+
+  // Save the order items to session storage before creating the order
+  saveOrderItemsToStorage(orderItems);
+
+  createOrder(orderItems)
+      .then(data => {
+        order = data; // Store the complete order object
+        console.log('Order created:', data);
+        saveOrderToStorage(data); // Save the order in session storage
+        window.location.href = `cart.html`;
+      })
+      .catch(error => {
+        console.error('Error creating order:', error);
+      });
 }
 
-// Retrieve the cart items from the local storage
-const cartItemsFromStorage = JSON.parse(localStorage.getItem('cartItems'));
-
-if (cartItemsFromStorage) {
-  cart.push(...cartItemsFromStorage);
-  updateCartDisplay();
+function saveOrderItemsToStorage(orderItems) {
+  sessionStorage.setItem('orderItems', JSON.stringify(orderItems));
+}
+function saveOrderToStorage(order) {
+  sessionStorage.setItem('order', JSON.stringify(order));
 }
 
-// Fetch order items and populate the cart on page load
-function fetchOrderItems(orderId) {
-  fetch(`http://localhost:8080/orders/${orderId}/items`)
-    .then(response => response.json())
-    .then(data => {
-      cart.push(...data);
-      updateCartDisplay();
-    })
-    .catch(error => {
-      console.error('Error fetching order items:', error);
-    });
-}
-
-// Add order item to the order
-function addOrderItemToOrder(orderId, productId, quantity) {
-  fetch(`http://localhost:8080/orders/${orderId}/items`, {
+function createOrder(orderItems) {
+  return fetch('http://localhost:8080/orders', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      productId: productId,
-      quantity: quantity
-    })
+    body: JSON.stringify(orderItems),
+    credentials: 'include'
   })
-    .then(response => {
-      if (response.ok) {
-        console.log('Order item added successfully.');
-      } else {
-        console.error('Error adding order item:', response.statusText);
-      }
-    })
-    .catch(error => {
-      console.error('Error adding order item:', error);
-    });
+      .then(response => response.json())
+      .then(data => {
+        order = data; // Store the complete order object
+        console.log(order);
+        return data;
+      })
+      .catch(error => {
+        console.error('Error creating order:', error);
+      });
+}
+
+function getProductByName(name) {
+  const productElements = document.getElementsByClassName('product');
+  for (const productElement of productElements) {
+    const productName = productElement.querySelector('h3').textContent;
+    if (productName === name) {
+      const productId = productElement.querySelector('img').src.split('/').pop().split('.').shift();
+      return {
+        id: parseInt(productId, 10),
+        name: productName
+      };
+    }
+  }
+  return null;
+}
+
+const ordersLink = document.querySelector('a[href="order"]');
+ordersLink.addEventListener('click', redirectToHistoryPage);
+
+function redirectToHistoryPage(event) {
+  event.preventDefault();
+  window.location.href = 'history.html';
+}
+
+const logOutLink = document.querySelector('a[href="logout"]');
+logOutLink.addEventListener('click',redirectToSignInPage);
+function redirectToSignInPage(event) {
+  event.preventDefault();
+  window.location.href = 'registration.html'
 }

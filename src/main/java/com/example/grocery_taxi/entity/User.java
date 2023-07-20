@@ -35,9 +35,14 @@ public class User {
     private UserRole role;
 
     @NotBlank
-    @JsonIgnore
     @Size(min = 8)
     private String password;
+
+    @NotBlank
+    private String address;
+
+    @NotBlank
+    private String phone_number;
 
 
     public User() {

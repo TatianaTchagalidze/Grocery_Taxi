@@ -1,14 +1,11 @@
 // CourierController.java
 package com.example.grocery_taxi.controllers;
 
-import com.example.grocery_taxi.entity.Order;
+import com.example.grocery_taxi.dto.OrderDTO;
 import com.example.grocery_taxi.exception.OrderServiceException;
 import com.example.grocery_taxi.service.CourierService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,14 +23,15 @@ public class CourierController {
 
   @GetMapping("/orders/open")
 
-  public ResponseEntity<List<Order>> getOpenOrders() {
-    List<Order> openOrders = courierService.getOpenOrders();
+  public ResponseEntity<List<OrderDTO>> getOpenOrders() {
+    List<OrderDTO> openOrders = courierService.getOpenOrders();
     return ResponseEntity.ok(openOrders);
   }
 
   @PostMapping("/orders/{orderId}/pickup")
-  public ResponseEntity<String> pickUpOrder(@PathVariable int orderId) throws OrderServiceException {
-    courierService.pickUpOrder(orderId);
-    return ResponseEntity.ok("Order picked up successfully.");
+  public ResponseEntity<Integer> pickUpOrder(@PathVariable int orderId) throws OrderServiceException {
+    int pickedOrderId = courierService.pickUpOrder(orderId);
+    return ResponseEntity.ok(pickedOrderId );
   }
+
 }

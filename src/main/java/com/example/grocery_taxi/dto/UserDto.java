@@ -1,5 +1,6 @@
 package com.example.grocery_taxi.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -10,6 +11,7 @@ import javax.validation.constraints.Size;
 @Getter
 @Setter
 public class UserDto {
+
   @NotBlank(message = "Email is required")
   @Email(message = "Invalid email format")
   private String email;
@@ -30,4 +32,9 @@ public class UserDto {
   @Size(min = 8, message = "Password confirmation must be at least 8 characters long")
   private String passwordConfirmation;
 
+  @NotBlank
+  private String address;
+
+  @NotBlank
+  private String phoneNumber;
 }
